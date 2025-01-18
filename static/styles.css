@@ -1,0 +1,178 @@
+/* Reset basic styling */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f7fc;
+    color: #333;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+/* Main Heading */
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #4e73df;
+}
+
+/* General Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Links */
+a {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    text-decoration: none;
+    color: #4e73df;
+    font-weight: bold;
+}
+
+a:hover {
+    color: #3e59b4;
+}
+
+/* Buttons */
+button {
+    background-color: #4e73df;
+    color: #fff;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #3e59b4;
+}
+
+/* Back to Home Button */
+button.back-home {
+    background-color: #f44336;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+button.back-home:hover {
+    background-color: #e53935;
+}
+
+/* Form styling */
+form {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+input[type="text"],
+input[type="file"],
+button {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+/* Table styling for Students and Attendance */
+table {
+    width: 80%;
+    margin: 30px auto;
+    border-collapse: collapse;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+table th, table td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+table th {
+    background-color: #4e73df;
+    color: white;
+}
+
+table tr:hover {
+    background-color: #f2f2f2;
+}
+
+/* Image styling for student photos */
+table td img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Attendance page */
+.attendance-section {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attendance-section input[type="file"] {
+    margin-bottom: 20px;
+}
+
+/* Success and error messages */
+.message {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+.message.success {
+    color: #4caf50;
+}
+
+.message.error {
+    color: #f44336;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+    h1 {
+        font-size: 1.8rem;
+    }
+
+    form,
+    .attendance-section,
+    .container {
+        padding: 15px;
+        width: 100%;
+    }
+
+    table {
+        width: 100%;
+    }
+
+    table th, table td {
+        padding: 10px;
+    }
+}

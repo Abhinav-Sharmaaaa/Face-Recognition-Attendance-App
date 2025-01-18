@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Student</title>
+    <link rel="stylesheet" href="../static/styles.css">
+</head>
+<body>
+    <h1>Register a Student</h1>
+    <form action="/register" method="post" enctype="multipart/form-data">
+        Name: <input type="text" name="name" required><br>
+        
+        Branch: 
+        <select name="branch" required>
+            <option value="C.S.E.">C.S.E.</option>
+            <option value="I.T.">I.T.</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Mechanical">Mechanical</option>
+            <option value="Automobile">Automobile</option>
+            <option value="Civil">Civil</option>
+            <option value="Pharmacy">Pharmacy</option>
+        </select><br>
+
+        Photo: <input type="file" name="photo" required><br>
+        <button type="submit">Register</button>
+    </form>
+    <a href="/">Back to Home</a>
+</body>
+</html>
