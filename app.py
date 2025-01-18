@@ -48,7 +48,16 @@ def compress_image(image_path, max_size=(1024, 1024)):
     """Compress the image to a reasonable size before saving."""
     img = Image.open(image_path)
     img.thumbnail(max_size)
-    compressed_image_path = image_path.replace('.', '_compressed.')
+    
+    # Ensure the directory exists before saving the image
+    compressed_image_dir = os.path.dirname(image_path)
+    if not os.path.exists(compressed_image_dir):
+        os.makedirs(compressed_image_dir)
+    
+    # Construct the path for the compressed image
+    base_filename, ext = os.path.splitext(image_path)
+    compressed_image_path = base_filename + '_compressed' + ext
+    
     img.save(compressed_image_path, optimize=True, quality=85)
     return compressed_image_path
 
