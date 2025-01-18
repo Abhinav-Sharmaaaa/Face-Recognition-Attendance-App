@@ -4,6 +4,8 @@ import os
 import json
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
+from PIL import Image
+import io
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './static/uploads'
@@ -41,6 +43,14 @@ def load_data(file_path):
 def save_data(file, data):
     with open(file, 'w') as f:
         json.dump(data, f, indent=4)
+
+def compress_image(image_path, max_size=(1024, 1024)):
+    """Compress the image to a reasonable size before saving."""
+    img = Image.open(image_path)
+    img.thumbnail(max_size)
+    compressed_image_path = image_path.replace('.', '_compressed.')
+    img.save(compressed_image_path, optimize=True, quality=85)
+    return compressed_image_path
 
 # Initialize files
 students = load_data(STUDENTS_FILE)
@@ -80,8 +90,11 @@ def register():
         photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
         photo.save(photo_path)
 
+        # Compress the image before uploading
+        compressed_photo_path = compress_image(photo_path)
+
         # Register face with Face++ API
-        with open(photo_path, 'rb') as image_file:
+        with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/detect',
                 data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
@@ -129,8 +142,11 @@ def edit_student(name):
             photo_path = os.path.join(app.config['UPLOAD_FOLDER'], new_photo.filename)
             new_photo.save(photo_path)
 
+            # Compress the image before uploading
+            compressed_photo_path = compress_image(photo_path)
+
             # Register face with Face++ API (update face token)
-            with open(photo_path, 'rb') as image_file:
+            with open(compressed_photo_path, 'rb') as image_file:
                 response = requests.post(
                     'https://api-us.faceplusplus.com/facepp/v3/detect',
                     data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
@@ -211,8 +227,11 @@ def attendance_view():
         photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
         photo.save(photo_path)
 
+        # Compress the image before uploading
+        compressed_photo_path = compress_image(photo_path)
+
         # Detect face
-        with open(photo_path, 'rb') as image_file:
+        with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/search',
                 data={
@@ -247,4 +266,3 @@ def present_view():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
