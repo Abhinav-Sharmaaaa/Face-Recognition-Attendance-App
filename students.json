@@ -3,5 +3,10 @@
         "branch": "cs",
         "photo": "resized_image.jpg",
         "face_token": "39e9abebeed1de027cc8fd7bf2681326"
+    },
+    "Sample Student": {
+        "branch": "Automobile",
+        "photo": "OIP.jpeg",
+        "face_token": "fac0676d0bdbe9be714f2918851ca999"
     }
 }
