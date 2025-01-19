@@ -6,10 +6,13 @@ from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from PIL import Image
 import io
+import pyimgur
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './static/uploads'
 app.secret_key = 'your_secret_key'
+
+IMGUR_CLIENT_ID = '068bd6a3c24e96a'
 
 FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
 FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
@@ -61,6 +64,15 @@ def compress_image(image_path, max_size=(1024, 1024)):
     img.save(compressed_image_path, optimize=True, quality=85)
     return compressed_image_path
 
+def upload_to_imgur(image_path):
+    im = pyimgur.Imgur(IMGUR_CLIENT_ID)
+    uploaded_image = im.upload_image(image_path)
+    
+    # Print the response content to debug
+    print(uploaded_image)
+    return uploaded_image.link
+
+
 # Initialize files
 students = load_data(STUDENTS_FILE)
 attendance = load_data(ATTENDANCE_FILE)
@@ -102,6 +114,9 @@ def register():
         # Compress the image before uploading
         compressed_photo_path = compress_image(photo_path)
 
+        # Upload to Imgur
+        imgur_link = upload_to_imgur(compressed_photo_path)
+
         # Register face with Face++ API
         with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
@@ -128,7 +143,7 @@ def register():
         )
 
         # Save student data
-        students[name] = {'branch': branch, 'photo': photo.filename, 'face_token': face_token}
+        students[name] = {'branch': branch, 'photo': imgur_link, 'face_token': face_token}
         save_data(STUDENTS_FILE, students)
 
         return redirect(url_for('index'))
@@ -153,6 +168,9 @@ def edit_student(name):
 
             # Compress the image before uploading
             compressed_photo_path = compress_image(photo_path)
+
+            # Upload to Imgur
+            imgur_link = upload_to_imgur(compressed_photo_path)
 
             # Register face with Face++ API (update face token)
             with open(compressed_photo_path, 'rb') as image_file:
@@ -192,7 +210,7 @@ def edit_student(name):
 
         # Update the student information
         student_data['branch'] = new_branch
-        student_data['photo'] = new_photo.filename if new_photo else student_data['photo']
+        student_data['photo'] = imgur_link if new_photo else student_data['photo']
         students[new_name] = student_data
         if new_name != name:
             del students[name]
@@ -203,7 +221,7 @@ def edit_student(name):
     
     return render_template('edit_student.html', student=student_data)
 
-@app.route('/remove_student/<name>', methods=['GET'])
+@app.route('/remove_student/<name>', methods=['POST'])
 def remove_student(name):
     if name not in students:
         return "Student not found!", 404
@@ -223,7 +241,7 @@ def remove_student(name):
 
     save_data(STUDENTS_FILE, students)
 
-    return redirect(url_for('index'))
+    return redirect(url_for('students_view'))
 
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance_view():
@@ -238,6 +256,9 @@ def attendance_view():
 
         # Compress the image before uploading
         compressed_photo_path = compress_image(photo_path)
+
+        # Upload to Imgur
+        imgur_link = upload_to_imgur(compressed_photo_path)
 
         # Detect face
         with open(compressed_photo_path, 'rb') as image_file:

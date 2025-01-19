@@ -117,12 +117,32 @@ table tr:hover {
     background-color: #f2f2f2;
 }
 
-/* Image styling for student photos */
-table td img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 50%;
+/* Delete Button */
+.delete-button {
+    background-color: #f44336;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-block;
+    margin: 0;
+}
+
+.delete-button:hover {
+    background-color: #e53935;
+}
+
+td {
+    position: relative;
+}
+
+/* Ensure the form doesn't add extra margin or padding */
+td form {
+    display: inline;
+    margin: 0;
+    padding: 0;
 }
 
 /* Attendance page */
