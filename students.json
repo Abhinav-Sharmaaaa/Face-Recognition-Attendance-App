@@ -3,5 +3,10 @@
         "branch": "C.S.E.",
         "photo": "https://i.imgur.com/xdr3kfn.jpeg",
         "face_token": "b0d86632a0b43007c6d8e9ba77cc5725"
+    },
+    "Random Person": {
+        "branch": "C.S.E.",
+        "photo": "https://i.imgur.com/XY3MxlC.jpeg",
+        "face_token": "42e21ad235b60aa1311ff1b49a56936f"
     }
 }

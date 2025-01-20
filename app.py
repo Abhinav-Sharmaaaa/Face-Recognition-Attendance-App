@@ -45,13 +45,16 @@ def save_data(file, data):
         json.dump(data, f, indent=4)
 
 def compress_image(image_path, max_size=(1024, 1024)):
+    """Compress the image to a reasonable size before saving."""
     img = Image.open(image_path)
     img.thumbnail(max_size)
     
+    # Ensure the directory exists before saving the image
     compressed_image_dir = os.path.dirname(image_path)
     if not os.path.exists(compressed_image_dir):
         os.makedirs(compressed_image_dir)
     
+    # Construct the path for the compressed image
     base_filename, ext = os.path.splitext(image_path)
     compressed_image_path = base_filename + '_compressed' + ext
     
@@ -61,6 +64,8 @@ def compress_image(image_path, max_size=(1024, 1024)):
 def upload_to_imgur(image_path):
     im = pyimgur.Imgur(IMGUR_CLIENT_ID)
     uploaded_image = im.upload_image(image_path)
+    
+    # Print the response content to debug
     print(uploaded_image)
     return uploaded_image.link
 
@@ -72,13 +77,16 @@ attendance = load_data(ATTENDANCE_FILE)
 scheduler = BackgroundScheduler()
 
 def reset_attendance():
+    """This function resets the attendance data at midnight."""
     global attendance
-    attendance = {}
+    attendance = {}  # Reset the attendance dictionary
     save_data(ATTENDANCE_FILE, attendance)
     print("Attendance reset at midnight")
 
 # Schedule the reset task to run every day at midnight
 scheduler.add_job(func=reset_attendance, trigger='cron', hour=0, minute=0)
+
+# Start the scheduler
 scheduler.start()
 
 @app.route('/')
@@ -95,12 +103,17 @@ def register():
         if not photo:
             return "Photo is required!", 400
         
+        # Save photo locally
         photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
         photo.save(photo_path)
 
+        # Compress the image before uploading
         compressed_photo_path = compress_image(photo_path)
+
+        # Upload to Imgur
         imgur_link = upload_to_imgur(compressed_photo_path)
 
+        # Register face with Face++ API
         with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/detect',
@@ -114,6 +127,7 @@ def register():
         
         face_token = face_data['faces'][0]['face_token']
 
+        # Add face to FaceSet
         requests.post(
             'https://api-us.faceplusplus.com/facepp/v3/faceset/addface',
             data={
@@ -124,6 +138,7 @@ def register():
             }
         )
 
+        # Save student data
         students[name] = {'branch': branch, 'photo': imgur_link, 'face_token': face_token}
         save_data(STUDENTS_FILE, students)
 
@@ -143,12 +158,17 @@ def edit_student(name):
         new_photo = request.files['photo']
         
         if new_photo:
+            # Save the new photo
             photo_path = os.path.join(app.config['UPLOAD_FOLDER'], new_photo.filename)
             new_photo.save(photo_path)
 
+            # Compress the image before uploading
             compressed_photo_path = compress_image(photo_path)
+
+            # Upload to Imgur
             imgur_link = upload_to_imgur(compressed_photo_path)
 
+            # Register face with Face++ API (update face token)
             with open(compressed_photo_path, 'rb') as image_file:
                 response = requests.post(
                     'https://api-us.faceplusplus.com/facepp/v3/detect',
@@ -162,6 +182,7 @@ def edit_student(name):
             
             face_token = face_data['faces'][0]['face_token']
 
+            # Remove old face from FaceSet and add new face
             requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/faceset/removeface',
                 data={
@@ -183,6 +204,7 @@ def edit_student(name):
 
             student_data['face_token'] = face_token
 
+        # Update the student information
         student_data['branch'] = new_branch
         student_data['photo'] = imgur_link if new_photo else student_data['photo']
         students[new_name] = student_data
@@ -202,6 +224,7 @@ def remove_student(name):
 
     student_data = students.pop(name)
     
+    # Remove the face from Face++ FaceSet
     requests.post(
         'https://api-us.faceplusplus.com/facepp/v3/faceset/removeface',
         data={
@@ -223,12 +246,17 @@ def attendance_view():
         if not photo:
             return "Photo is required!", 400
         
+        # Save photo locally
         photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
         photo.save(photo_path)
 
+        # Compress the image before uploading
         compressed_photo_path = compress_image(photo_path)
+
+        # Upload to Imgur
         imgur_link = upload_to_imgur(compressed_photo_path)
 
+        # Detect face
         with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/search',
@@ -264,13 +292,9 @@ def present_view():
 
 @app.route('/reset_attendance', methods=['POST'])
 def reset_attendance_route():
-    token = request.headers.get('Authorization')
-    if token != 'your_secret_token':  # Replace with your actual secret token
-        return jsonify({"message": "Unauthorized"}), 403
-    
     reset_attendance()  # Call the function to reset attendance
     return jsonify({"message": "Attendance has been reset."}), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable or default to 5000
+    app.run(debug=True, host='0.0.0.0', port=port)  # Listen on all network interfaces
