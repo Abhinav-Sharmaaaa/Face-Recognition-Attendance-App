@@ -9,10 +9,10 @@ import io
 import pyimgur
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = './static/uploads'
 app.secret_key = 'your_secret_key'
 
 IMGUR_CLIENT_ID = '068bd6a3c24e96a'
-
 FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
 FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
 FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'
@@ -24,6 +24,7 @@ ATTENDANCE_FILE = 'attendance.json'
 # Utility functions
 def load_data(file_path):
     if not os.path.exists(file_path):
+        # Create an empty dictionary in the file if it doesn't exist
         with open(file_path, 'w') as f:
             json.dump({}, f)
         return {}
@@ -31,10 +32,12 @@ def load_data(file_path):
     with open(file_path, 'r') as f:
         try:
             data = json.load(f)
+            # Ensure the data is a dictionary
             if not isinstance(data, dict):
                 data = {}
             return data
         except json.JSONDecodeError:
+            # Reset to an empty dictionary if JSON is invalid
             with open(file_path, 'w') as f:
                 json.dump({}, f)
             return {}
@@ -43,20 +46,29 @@ def save_data(file, data):
     with open(file, 'w') as f:
         json.dump(data, f, indent=4)
 
-def compress_image(image_file, max_size=(1024, 1024)):
-    """Compress the image to a reasonable size before uploading."""
-    img = Image.open(image_file)  # image_file can be a file upload or BytesIO
+def compress_image(image_path, max_size=(1024, 1024)):
+    """Compress the image to a reasonable size before saving."""
+    img = Image.open(image_path)
     img.thumbnail(max_size)
     
-    # Save the image to a BytesIO object instead of a file
-    img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='JPEG', optimize=True, quality=85)
-    img_byte_arr.seek(0)  # Reset the pointer to the start of the BytesIO object
-    return img_byte_arr
+    # Ensure the directory exists before saving the image
+    compressed_image_dir = os.path.dirname(image_path)
+    if not os.path.exists(compressed_image_dir):
+        os.makedirs(compressed_image_dir)
+    
+    # Construct the path for the compressed image
+    base_filename, ext = os.path.splitext(image_path)
+    compressed_image_path = base_filename + '_compressed' + ext
+    
+    img.save(compressed_image_path, optimize=True, quality=85)
+    return compressed_image_path
 
-def upload_to_imgur(image_file):
+def upload_to_imgur(image_path):
     im = pyimgur.Imgur(IMGUR_CLIENT_ID)
-    uploaded_image = im.upload_image(image_file, title="Uploaded with Flask")
+    uploaded_image = im.upload_image(image_path)
+    
+    # Print the response content to debug
+    print(uploaded_image)
     return uploaded_image.link
 
 # Initialize files
@@ -93,19 +105,23 @@ def register():
         if not photo:
             return "Photo is required!", 400
         
-        # Compress the image in memory
-        compressed_photo = compress_image(photo)
+        # Save photo locally
+        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
+        photo.save(photo_path)
+
+        # Compress the image before uploading
+        compressed_photo_path = compress_image(photo_path)
 
         # Upload to Imgur
-        imgur_link = upload_to_imgur(compressed_photo)
+        imgur_link = upload_to_imgur(compressed_photo_path)
 
         # Register face with Face++ API
-        compressed_photo.seek(0)  # Reset the pointer to the start of the BytesIO object
-        response = requests.post(
-            'https://api-us.faceplusplus.com/facepp/v3/detect',
-            data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
-            files={'image_file': compressed_photo}
-        )
+        with open(compressed_photo_path, 'rb') as image_file:
+            response = requests.post(
+                'https://api-us.faceplusplus.com/facepp/v3/detect',
+                data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
+                files={'image_file': image_file}
+            )
         
         face_data = response.json()
         if 'faces' not in face_data or len(face_data['faces']) == 0:
@@ -144,19 +160,23 @@ def edit_student(name):
         new_photo = request.files['photo']
         
         if new_photo:
-            # Compress the image in memory
-            compressed_photo = compress_image(new_photo)
+            # Save the new photo
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], new_photo.filename)
+            new_photo.save(photo_path)
+
+            # Compress the image before uploading
+            compressed_photo_path = compress_image(photo_path)
 
             # Upload to Imgur
-            imgur_link = upload_to_imgur(compressed_photo)
+            imgur_link = upload_to_imgur(compressed_photo_path)
 
             # Register face with Face++ API (update face token)
-            compressed_photo.seek(0)  # Reset the pointer to the start of the BytesIO object
-            response = requests.post(
-                'https://api-us.faceplusplus.com/facepp/v3/detect',
-                data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
-                files={'image_file': compressed_photo}
-            )
+            with open(compressed_photo_path, 'rb') as image_file:
+                response = requests.post(
+                    'https://api-us.faceplusplus.com/facepp/v3/detect',
+                    data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
+                    files={'image_file': image_file}
+                )
             
             face_data = response.json()
             if 'faces' not in face_data or len(face_data['faces']) == 0:
@@ -228,23 +248,27 @@ def attendance_view():
         if not photo:
             return "Photo is required!", 400
         
-        # Compress the image in memory
-        compressed_photo = compress_image(photo)
+        # Save photo locally
+        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
+        photo.save(photo_path)
+
+        # Compress the image before uploading
+        compressed_photo_path = compress_image(photo_path)
 
         # Upload to Imgur
-        imgur_link = upload_to_imgur(compressed_photo)
+        imgur_link = upload_to_imgur(compressed_photo_path)
 
         # Detect face
-        compressed_photo.seek(0)  # Reset the pointer to the start of the BytesIO object
-        response = requests.post(
-            'https://api-us.faceplusplus.com/facepp/v3/search',
-            data={
-                'api_key': FACEPP_API_KEY,
-                'api_secret': FACEPP_API_SECRET,
-                'faceset_token': FACEPP_FACESET_TOKEN
-            },
-            files={'image_file': compressed_photo}
-        )
+        with open(compressed_photo_path, 'rb') as image_file:
+            response = requests.post(
+                'https://api-us.faceplusplus.com/facepp/v3/search',
+                data={
+                    'api_key': FACEPP_API_KEY,
+                    'api_secret': FACEPP_API_SECRET,
+                    'faceset_token': FACEPP_FACESET_TOKEN
+                },
+                files={'image_file': image_file}
+            )
         
         result = response.json()
         if 'results' not in result or len(result['results']) == 0:
