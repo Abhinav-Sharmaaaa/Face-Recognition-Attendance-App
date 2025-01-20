@@ -5,8 +5,9 @@ import json
 from datetime import datetime
 from apscheduler.schedulers.background import BackgroundScheduler
 from PIL import Image
-import io
+import io 
 import pyimgur
+from io import BytesIO
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './static/uploads'
@@ -63,13 +64,22 @@ def compress_image(image_path, max_size=(1024, 1024)):
     img.save(compressed_image_path, optimize=True, quality=85)
     return compressed_image_path
 
-def upload_to_imgur(image_path):
-    im = pyimgur.Imgur(IMGUR_CLIENT_ID)
-    uploaded_image = im.upload_image(image_path)
+import requests
+
+def upload_to_imgur(image_file):
+    headers = {
+        'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
+    }
+    response = requests.post(
+        'https://api.imgur.com/3/image',
+        headers=headers,
+        files={'image': image_file}
+    )
     
-    # Print the response content to debug
-    print(uploaded_image)
-    return uploaded_image.link
+    if response.status_code == 200:
+        return response.json()['data']['link']
+    else:
+        raise Exception(f"Imgur upload failed: {response.status_code} - {response.text}")
 
 # Initialize files
 students = load_data(STUDENTS_FILE)
@@ -248,28 +258,27 @@ def attendance_view():
         if not photo:
             return "Photo is required!", 400
         
-        # Save photo locally
-        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
-        photo.save(photo_path)
-
-        # Compress the image before uploading
-        compressed_photo_path = compress_image(photo_path)
+        # Use BytesIO to handle the image in memory
+        image_stream = BytesIO()
+        photo.save(image_stream)
+        image_stream.seek(0)  # Move to the beginning of the stream
 
         # Upload to Imgur
-        imgur_link = upload_to_imgur(compressed_photo_path)
+        imgur_link = upload_to_imgur(image_stream)
 
         # Detect face
-        with open(compressed_photo_path, 'rb') as image_file:
-            response = requests.post(
-                'https://api-us.faceplusplus.com/facepp/v3/search',
-                data={
-                    'api_key': FACEPP_API_KEY,
-                    'api_secret': FACEPP_API_SECRET,
-                    'faceset_token': FACEPP_FACESET_TOKEN
-                },
-                files={'image_file': image_file}
-            )
-        
+        # You can use the image_stream again if needed for face detection
+        image_stream.seek(0)  # Reset the stream position
+        response = requests.post(
+            'https://api-us.faceplusplus.com/facepp/v3/search',
+            data={
+                'api_key': FACEPP_API_KEY,
+                'api_secret': FACEPP_API_SECRET,
+                'faceset_token': FACEPP_FACESET_TOKEN
+            },
+            files={'image_file': image_stream}
+        )
+
         result = response.json()
         if 'results' not in result or len(result['results']) == 0:
             return "No matching face found!", 400
