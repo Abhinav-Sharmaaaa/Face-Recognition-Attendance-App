@@ -1,105 +1,78 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import requests
 import os
-import json
 from datetime import datetime
-from apscheduler.schedulers.background import BackgroundScheduler
 from PIL import Image
-import io 
-import pyimgur
-from io import BytesIO
+import io
+import logging
+from dotenv import load_dotenv
+from flask_pymongo import PyMongo
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+pymongo_logger = logging.getLogger('pymongo')
+pymongo_logger.setLevel(logging.WARNING)  # Suppress pymongo debug logs
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = './static/uploads'
 app.secret_key = 'your_secret_key'
 
+# MongoDB configuration
+app.config['MONGO_URI'] = os.environ.get('MONGO_URI')
+mongo = PyMongo(app)
+
 IMGUR_CLIENT_ID = '068bd6a3c24e96a'
 FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
 FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
-FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'
-
-# Initialize storage files
-STUDENTS_FILE = 'students.json'
-ATTENDANCE_FILE = 'attendance.json'
-
-# Utility functions
-def load_data(file_path):
-    if not os.path.exists(file_path):
-        # Create an empty dictionary in the file if it doesn't exist
-        with open(file_path, 'w') as f:
-            json.dump({}, f)
-        return {}
-
-    with open(file_path, 'r') as f:
-        try:
-            data = json.load(f)
-            # Ensure the data is a dictionary
-            if not isinstance(data, dict):
-                data = {}
-            return data
-        except json.JSONDecodeError:
-            # Reset to an empty dictionary if JSON is invalid
-            with open(file_path, 'w') as f:
-                json.dump({}, f)
-            return {}
-
-def save_data(file, data):
-    with open(file, 'w') as f:
-        json.dump(data, f, indent=4)
+FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'  # Ensure this is correctly created in Face++
 
 def compress_image(image_path, max_size=(1024, 1024)):
-    """Compress the image to a reasonable size before saving."""
+    """Compress image before saving."""
     img = Image.open(image_path)
     img.thumbnail(max_size)
     
-    # Ensure the directory exists before saving the image
+    # Ensure directory exists
     compressed_image_dir = os.path.dirname(image_path)
     if not os.path.exists(compressed_image_dir):
         os.makedirs(compressed_image_dir)
-    
-    # Construct the path for the compressed image
+
+    # Construct compressed image path
     base_filename, ext = os.path.splitext(image_path)
     compressed_image_path = base_filename + '_compressed' + ext
     
     img.save(compressed_image_path, optimize=True, quality=85)
     return compressed_image_path
 
-import requests
-
 def upload_to_imgur(image_file):
-    headers = {
-        'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'
-    }
+    """Uploads an image to Imgur and returns the image URL."""
+    headers = {'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'}
     response = requests.post(
         'https://api.imgur.com/3/image',
         headers=headers,
         files={'image': image_file}
     )
-    
+
     if response.status_code == 200:
         return response.json()['data']['link']
     else:
         raise Exception(f"Imgur upload failed: {response.status_code} - {response.text}")
 
-# Initialize files
-students = load_data(STUDENTS_FILE)
-attendance = load_data(ATTENDANCE_FILE)
-
-# Initialize the scheduler
-scheduler = BackgroundScheduler()
-
-def reset_attendance():
-    """This function resets the attendance data at midnight."""
-    global attendance
-    attendance = {}  # Reset the attendance dictionary
-    save_data(ATTENDANCE_FILE, attendance)
-    print("Attendance reset at midnight")
-
-# Schedule the reset task to run every day at midnight
-scheduler.add_job(func=reset_attendance, trigger='cron', hour=0, minute=0)
-
-# Start the scheduler
-scheduler.start()
+def add_face_to_faceset(face_token):
+    """Adds a face token to the Face++ FaceSet."""
+    response = requests.post(
+        'https://api-us.faceplusplus.com/facepp/v3/faceset/addface',
+        data={
+            'api_key': FACEPP_API_KEY,
+            'api_secret': FACEPP_API_SECRET,
+            'faceset_token': FACEPP_FACESET_TOKEN,
+            'face_tokens': face_token
+        }
+    )
+    result = response.json()
+    logging.debug(f"FaceSet add response: {result}")
 
 @app.route('/')
 def index():
@@ -111,143 +84,60 @@ def register():
         name = request.form['name']
         branch = request.form['branch']
         photo = request.files['photo']
-        
+
         if not photo:
             return "Photo is required!", 400
-        
+
+        # Check if uploaded file is an image
+        if not photo.content_type.startswith('image/'):
+            return "Uploaded file is not an image!", 400
+
         # Save photo locally
         photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
         photo.save(photo_path)
 
-        # Compress the image before uploading
+        # Compress image before uploading
         compressed_photo_path = compress_image(photo_path)
 
-        # Upload to Imgur
-        imgur_link = upload_to_imgur(compressed_photo_path)
+        # Upload compressed image to Imgur
+        with open(compressed_photo_path, 'rb') as image_file:
+            imgur_link = upload_to_imgur(image_file)
 
-        # Register face with Face++ API
+        # Detect face with Face++ API
         with open(compressed_photo_path, 'rb') as image_file:
             response = requests.post(
                 'https://api-us.faceplusplus.com/facepp/v3/detect',
                 data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
                 files={'image_file': image_file}
             )
-        
+
         face_data = response.json()
         if 'faces' not in face_data or len(face_data['faces']) == 0:
             return "No face detected in the image!", 400
-        
+
         face_token = face_data['faces'][0]['face_token']
+        logging.debug(f"Registered face token: {face_token}")
 
         # Add face to FaceSet
-        requests.post(
-            'https://api-us.faceplusplus.com/facepp/v3/faceset/addface',
-            data={
-                'api_key': FACEPP_API_KEY,
-                'api_secret': FACEPP_API_SECRET,
-                'faceset_token': FACEPP_FACESET_TOKEN,
-                'face_tokens': face_token
-            }
-        )
+        add_face_to_faceset(face_token)
 
-        # Save student data
-        students[name] = {'branch': branch, 'photo': imgur_link, 'face_token': face_token}
-        save_data(STUDENTS_FILE, students)
+        # Save student data to MongoDB
+        new_student = {
+            'name': name,
+            'branch': branch,
+            'photo': imgur_link,
+            'face_token': face_token
+        }
+        mongo.db.students.insert_one(new_student)
 
         return redirect(url_for('index'))
     return render_template('register.html')
 
-@app.route('/edit_student/<name>', methods=['GET', 'POST'])
-def edit_student(name):
-    if name not in students:
-        return "Student not found!", 404
-
-    student_data = students[name]
-    
-    if request.method == 'POST':
-        new_name = request.form['name']
-        new_branch = request.form['branch']
-        new_photo = request.files['photo']
-        
-        if new_photo:
-            # Save the new photo
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], new_photo.filename)
-            new_photo.save(photo_path)
-
-            # Compress the image before uploading
-            compressed_photo_path = compress_image(photo_path)
-
-            # Upload to Imgur
-            imgur_link = upload_to_imgur(compressed_photo_path)
-
-            # Register face with Face++ API (update face token)
-            with open(compressed_photo_path, 'rb') as image_file:
-                response = requests.post(
-                    'https://api-us.faceplusplus.com/facepp/v3/detect',
-                    data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
-                    files={'image_file': image_file}
-                )
-            
-            face_data = response.json()
-            if 'faces' not in face_data or len(face_data['faces']) == 0:
-                return "No face detected in the image!", 400
-            
-            face_token = face_data['faces'][0]['face_token']
-
-            # Remove old face from FaceSet and add new face
-            requests.post(
-                'https://api-us.faceplusplus.com/facepp/v3/faceset/removeface',
-                data={
-                    'api_key': FACEPP_API_KEY,
-                    'api_secret': FACEPP_API_SECRET,
-                    'faceset_token': FACEPP_FACESET_TOKEN,
-                    'face_tokens': student_data['face_token']
-                }
-            )
-            requests.post(
-                'https://api-us.faceplusplus.com/facepp/v3/faceset/addface',
-                data={
-                    'api_key': FACEPP_API_KEY,
-                    'api_secret': FACEPP_API_SECRET,
-                    'faceset_token': FACEPP_FACESET_TOKEN,
-                    'face_tokens': face_token
-                }
-            )
-
-            student_data['face_token'] = face_token
-
-        # Update the student information
-        student_data['branch'] = new_branch
-        student_data['photo'] = imgur_link if new_photo else student_data['photo']
-        students[new_name] = student_data
-        if new_name != name:
-            del students[name]
-
-        save_data(STUDENTS_FILE, students)
-
-        return redirect(url_for('index'))
-    
-    return render_template('edit_student.html', student=student_data)
-
 @app.route('/remove_student/<name>', methods=['POST'])
 def remove_student(name):
-    if name not in students:
+    result = mongo.db.students.delete_one({'name': name})
+    if result.deleted_count == 0:
         return "Student not found!", 404
-
-    student_data = students.pop(name)
-    
-    # Remove the face from Face++ FaceSet
-    requests.post(
-        'https://api-us.faceplusplus.com/facepp/v3/faceset/removeface',
-        data={
-            'api_key': FACEPP_API_KEY,
-            'api_secret': FACEPP_API_SECRET,
-            'faceset_token': FACEPP_FACESET_TOKEN,
-            'face_tokens': student_data['face_token']
-        }
-    )
-
-    save_data(STUDENTS_FILE, students)
 
     return redirect(url_for('students_view'))
 
@@ -257,18 +147,13 @@ def attendance_view():
         photo = request.files['photo']
         if not photo:
             return "Photo is required!", 400
-        
-        # Use BytesIO to handle the image in memory
-        image_stream = BytesIO()
-        photo.save(image_stream)
-        image_stream.seek(0)  # Move to the beginning of the stream
 
-        # Upload to Imgur
-        imgur_link = upload_to_imgur(image_stream)
+        # Convert image to bytes
+        image_bytes = io.BytesIO()
+        photo.save(image_bytes)
+        image_bytes.seek(0)
 
-        # Detect face
-        # You can use the image_stream again if needed for face detection
-        image_stream.seek(0)  # Reset the stream position
+        # Search for the face in the FaceSet
         response = requests.post(
             'https://api-us.faceplusplus.com/facepp/v3/search',
             data={
@@ -276,36 +161,52 @@ def attendance_view():
                 'api_secret': FACEPP_API_SECRET,
                 'faceset_token': FACEPP_FACESET_TOKEN
             },
-            files={'image_file': image_stream}
+            files={'image_file': image_bytes}
         )
 
         result = response.json()
-        if 'results' not in result or len(result['results']) == 0:
-            return "No matching face found!", 400
-        
-        face_token = result['results'][0]['face_token']
-        for name, data in students.items():
-            if data['face_token'] == face_token:
-                attendance[name] = {'branch': data['branch'], 'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-                save_data(ATTENDANCE_FILE, attendance)
+        logging.debug(f"Face++ search response: {result}")
+
+        if 'results' in result and len(result['results']) > 0:
+            face_token = result['results'][0]['face_token']
+            confidence = result['results'][0]['confidence']
+            logging.debug(f"Detected face token: {face_token}, Confidence: {confidence}")
+
+            # Confidence threshold
+            if confidence < 75:
+                return "Face not recognized with enough confidence!", 400
+
+            # Find the student by face token
+            student = mongo.db.students.find_one({'face_token': face_token})
+            if student:
+                attendance_record = {
+                    'student_name': student['name'],
+                    'branch': student['branch'],
+                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                mongo.db.attendance.insert_one(attendance_record)
                 return redirect(url_for('index'))
-        
-        return "Student not found!", 404
+
+            return "Student not found!", 404
+        else:
+            return "No matching face found!", 400
+
     return render_template('attendance.html')
 
 @app.route('/students')
 def students_view():
+    students = mongo.db.students.find()
     return render_template('students.html', students=students)
 
 @app.route('/present')
 def present_view():
-    return render_template('present.html', attendance=attendance)
+    attendance_records = mongo.db.attendance.find()
+    return render_template('present.html', attendance=attendance_records)
 
 @app.route('/reset_attendance', methods=['POST'])
 def reset_attendance_route():
-    reset_attendance()  # Call the function to reset attendance
+    mongo.db.attendance.delete_many({})
     return jsonify({"message": "Attendance has been reset."}), 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable or default to 5000
-    app.run(debug=True, host='0.0.0.0', port=port)  # Listen on all network interfaces
+    app.run(debug=True, host='0.0.0.0', port=5000)

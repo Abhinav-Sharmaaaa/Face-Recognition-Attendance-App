@@ -35,12 +35,12 @@
                 </tr>
             </thead>
             <tbody>
-                {% for name, data in students.items() %}
+                {% for student in students %}
                 <tr>
-                    <td>{{ name }}</td>
-                    <td>{{ data['branch'] }}</td>
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.branch }}</td>
                     <td>
-                        <form action="{{ url_for('remove_student', name=name) }}" method="post" style="display:inline;" onsubmit="return confirmDelete(event, '{{ name }}');">
+                        <form action="{{ url_for('remove_student', name=student.name) }}" method="post" style="display:inline;" onsubmit="return confirmDelete(event, '{{ student.name }}');">
                             <button class="delete-button" type="submit">Delete</button>
                         </form>
                     </td>
