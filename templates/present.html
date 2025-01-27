@@ -83,17 +83,24 @@
 
     <script>
         document.getElementById("resetButton").addEventListener("click", function() {
-            if (confirm("Are you sure you want to reset all attendance records?")) {
-                fetch("/reset_attendance", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("resetMessage").style.display = "block";
-                    setTimeout(() => location.reload(), 1000);
-                })
-                .catch(error => console.error("Error:", error));
+            // Prompt for password
+            let password = prompt("Please enter the password to reset attendance records:");
+            
+            if (password === "9999") {
+                if (confirm("Are you sure you want to reset all attendance records?")) {
+                    fetch("/reset_attendance", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById("resetMessage").style.display = "block";
+                        setTimeout(() => location.reload(), 1000);
+                    })
+                    .catch(error => console.error("Error:", error));
+                }
+            } else {
+                alert("Incorrect password!");
             }
         });
     </script>
