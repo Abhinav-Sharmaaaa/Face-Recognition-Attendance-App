@@ -15,8 +15,8 @@ body {
 
 /* Header Image */
 .header-image {
-    width: 150px; /* Logo ke liye chhoti size */
-    height: auto; /* Aspect ratio maintain karega */
+    width: 15px; /* Logo ke liye chhoti size */
+    height: 20px; /* Aspect ratio maintain karega */
     padding: 10px; /* Andar ka gap */
     margin: 10px; /* Bahar ka gap */
     display: block; /* Center align ke liye */
