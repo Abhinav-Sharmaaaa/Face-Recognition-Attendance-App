@@ -13,89 +13,11 @@ body {
     padding: 20px;
 }
 
-/* Header Image */
+/* Header Image (Smaller Size) */
 .header-image {
-    width: 15px; /* Logo ke liye chhoti size */
-    height: 20px; /* Aspect ratio maintain karega */
-    padding: 10px; /* Andar ka gap */
-    margin: 10px; /* Bahar ka gap */
-    display: block; /* Center align ke liye */
-}
-
-/* Main Heading */
-h1 {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
-/* General Container */
-.container {
-    max-width: 900px;
-    margin: auto;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Navigation Links */
-.nav-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.nav-links a {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    font-weight: bold;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.2);
-    padding: 15px;
-    width: 280px;
-    margin: 10px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease-in-out;
-}
-
-.nav-links a:hover {
-    background: rgba(255, 255, 255, 0.4);
-    transform: scale(1.05);
-}
-
-/* Icons for Links */
-.nav-links img {
-    width: 35px;
-    margin-right: 12px;
-}
-
-/* Responsive Design */
-@media screen and (max-width: 768px) {
-    .nav-links a {
-        width: 90%;
-    }
-
-    h1 {
-        font-size: 2rem;
-    }
-}
-
-
-body {
-    background: linear-gradient(to right, #4e73df, #1e3c72);
-    color: #fff;
-    text-align: center;
-    padding: 20px;
-}
-
-/* Header Image */
-.header-image {
-    width: 150px;
-    margin-bottom: 20px;
+    width: 100px; /* Reduced size */
+    height: auto;
+    margin-bottom: 15px;
     border-radius: 50%;
     box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
 }
@@ -124,6 +46,7 @@ h1 {
     align-items: center;
 }
 
+/* Buttons with New Colors */
 .btn-gradient {
     display: flex;
     align-items: center;
@@ -131,7 +54,7 @@ h1 {
     text-decoration: none;
     font-weight: bold;
     color: #fff;
-    background: linear-gradient(135deg, #ff7eb3, #ff758c);
+    background: linear-gradient(135deg, #ff7eb3, #ff758c); /* Vibrant Gradient */
     padding: 15px;
     width: 280px;
     margin: 10px;
@@ -146,9 +69,9 @@ h1 {
     transform: scale(1.05);
 }
 
-/* Icons for Links */
+/* Icons for Buttons */
 .btn-gradient img {
-    width: 35px;
+    width: 30px;
     margin-right: 12px;
 }
 
