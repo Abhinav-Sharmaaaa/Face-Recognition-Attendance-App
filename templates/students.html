@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script>
+        function confirmDelete(event, name) {
+            // Prompt for the password
+            const password = prompt(`Enter the password to delete ${name}:`);
+            
+            // Validate the password
+            if (password === "0000") {
+                // If password is correct, proceed with form submission
+                return true;
+            } else {
+                // If password is incorrect, prevent form submission
+                alert("Incorrect password. Deletion canceled.");
+                event.preventDefault();
+                return false;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Registered Students</h1>
+    <div class="container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Branch</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student.name }}</td>
+                    <td>{{ student.branch }}</td>
+                    <td>
+                        <form action="{{ url_for('remove_student', name=student.name) }}" method="post" style="display:inline;" onsubmit="return confirmDelete(event, '{{ student.name }}');">
+                            <button class="delete-button" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <a href="/">Back to Home</a>
+</body>
+</html>

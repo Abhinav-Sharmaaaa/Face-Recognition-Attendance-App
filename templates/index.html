@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header Image -->
+        <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Attendance System Logo" class="header-image">
+
+        <h1>Welcome to the Attendance System</h1>
+
+        <!-- Navigation Links with Icons -->
+        <div class="nav-links">
+            <a href="/register">
+                <img src="https://cdn-icons-png.flaticon.com/128/456/456212.png" alt="Register Icon">
+                Register a Student
+            </a>
+            <a href="/attendance">
+                <img src="{{ url_for('static', filename='images/attendance.png') }}" alt="Attendance Icon">
+                Mark Attendance
+            </a>
+            <a href="/students">
+                <img src="{{ url_for('static', filename='images/students.png') }}" alt="Students Icon">
+                View Registered Students
+            </a>
+            <a href="/present">
+                <img src="{{ url_for('static', filename='images/view_attendance.png') }}" alt="Attendance List Icon">
+                View Attendance
+            </a>
+        </div>
+    </div>
+</body>
+</html>
