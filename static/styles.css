@@ -15,10 +15,11 @@ body {
 
 /* Header Image */
 .header-image {
-    width: 150px;
-    margin-bottom: 20px;
-    border-radius: 50%;
-    box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
+    width: 150px; /* Logo ke liye chhoti size */
+    height: auto; /* Aspect ratio maintain karega */
+    padding: 10px; /* Andar ka gap */
+    margin: 10px; /* Bahar ka gap */
+    display: block; /* Center align ke liye */
 }
 
 /* Main Heading */
@@ -82,18 +83,11 @@ h1 {
         font-size: 2rem;
     }
 }
-/* Reset basic styling */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
 
-/* Body Styling */
+
 body {
     background: linear-gradient(to right, #4e73df, #1e3c72);
-    color: white;
+    color: #fff;
     text-align: center;
     padding: 20px;
 }
@@ -113,38 +107,56 @@ h1 {
     margin-bottom: 20px;
 }
 
+/* General Container */
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* Navigation Links */
-.nav-item {
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.btn-gradient {
     display: flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    font-size: 1.1rem;
     font-weight: bold;
-    padding: 12px;
-    width: 100%;
-    margin: 10px 0;
-    border-radius: 8px;
+    color: #fff;
+    background: linear-gradient(135deg, #ff7eb3, #ff758c);
+    padding: 15px;
+    width: 280px;
+    margin: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease-in-out;
+    border: none;
 }
 
-.nav-item img.nav-icon {
-    width: 30px;
-    margin-right: 10px;
-}
-
-/* Hover Effects */
-.nav-item:hover {
+.btn-gradient:hover {
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
     transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(255, 255, 255, 0.2);
+}
+
+/* Icons for Links */
+.btn-gradient img {
+    width: 35px;
+    margin-right: 12px;
 }
 
 /* Responsive Design */
 @media screen and (max-width: 768px) {
-    .nav-item {
-        width: 100%;
+    .btn-gradient {
+        width: 90%;
     }
-
     h1 {
         font-size: 2rem;
     }
