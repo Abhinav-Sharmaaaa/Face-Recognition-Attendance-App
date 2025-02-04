@@ -1,86 +1,51 @@
-/* Reset basic styling */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
-
 body {
-    background: linear-gradient(to right, #4e73df, #1e3c72);
-    color: #fff;
-    text-align: center;
-    padding: 20px;
+    background-color: #e9f4fe; /* Light blue background */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Header Image (Smaller Size) */
-.header-image {
-    width: 100px; /* Reduced size */
-    height: auto;
-    margin-bottom: 15px;
-    border-radius: 50%;
-    box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.3);
-}
-
-/* Main Heading */
-h1 {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 20px;
-}
-
-/* General Container */
-.container {
-    max-width: 900px;
-    margin: auto;
-    padding: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-/* Navigation Links */
-.nav-links {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Buttons with New Colors */
-.btn-gradient {
+.btn-box {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 20px;
+    margin: 15px;
+    background-color: #ffffff;
+    border: 2px solid #4e73df; /* Blue border */
+    border-radius: 15px;
+    color: #4e73df; /* Blue text */
     text-decoration: none;
-    font-weight: bold;
-    color: #fff;
-    background: linear-gradient(135deg, #ff7eb3, #ff758c); /* Vibrant Gradient */
-    padding: 15px;
-    width: 280px;
-    margin: 10px;
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    transition: all 0.3s ease-in-out;
-    border: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.btn-gradient:hover {
-    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+.btn-box img {
+    width: 20px;
+    margin-right: 10px;
+}
+
+.btn-box:hover {
+    background-color: #4e73df;
+    color: white;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
     transform: scale(1.05);
 }
 
-/* Icons for Buttons */
-.btn-gradient img {
-    width: 30px;
-    margin-right: 12px;
+h1 {
+    color: #4e73df; /* Dark blue text */
+    font-size: 2.5rem;
+    margin-top: 20px;
 }
 
-/* Responsive Design */
-@media screen and (max-width: 768px) {
-    .btn-gradient {
-        width: 90%;
-    }
-    h1 {
-        font-size: 2rem;
-    }
+.nav-links {
+    margin-top: 30px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
 }
