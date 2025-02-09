@@ -17,7 +17,6 @@ pymongo_logger = logging.getLogger('pymongo')
 pymongo_logger.setLevel(logging.WARNING)  # Suppress pymongo debug logs
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = './static/uploads'
 app.secret_key = 'your_secret_key'
 
 # MongoDB configuration
@@ -29,22 +28,17 @@ FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
 FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
 FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'  # Ensure this is correctly created in Face++
 
-def compress_image(image_path, max_size=(1024, 1024)):
-    """Compress image before saving."""
-    img = Image.open(image_path)
-    img.thumbnail(max_size)
-    
-    # Ensure directory exists
-    compressed_image_dir = os.path.dirname(image_path)
-    if not os.path.exists(compressed_image_dir):
-        os.makedirs(compressed_image_dir)
+def compress_image(image_file):
+    """Compress image before uploading."""
+    img = Image.open(image_file)
+    img.thumbnail((1024, 1024))  # Resize image
 
-    # Construct compressed image path
-    base_filename, ext = os.path.splitext(image_path)
-    compressed_image_path = base_filename + '_compressed' + ext
+    # Save the compressed image to a byte buffer
+    compressed_image = io.BytesIO()
+    img.save(compressed_image, format="JPEG", optimize=True, quality=85)
+    compressed_image.seek(0)
     
-    img.save(compressed_image_path, optimize=True, quality=85)
-    return compressed_image_path
+    return compressed_image
 
 def upload_to_imgur(image_file):
     """Uploads an image to Imgur and returns the image URL."""
@@ -92,24 +86,19 @@ def register():
         if not photo.content_type.startswith('image/'):
             return "Uploaded file is not an image!", 400
 
-        # Save photo locally
-        photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo.filename)
-        photo.save(photo_path)
-
         # Compress image before uploading
-        compressed_photo_path = compress_image(photo_path)
+        compressed_image = compress_image(photo)
 
         # Upload compressed image to Imgur
-        with open(compressed_photo_path, 'rb') as image_file:
-            imgur_link = upload_to_imgur(image_file)
+        imgur_link = upload_to_imgur(compressed_image)
 
         # Detect face with Face++ API
-        with open(compressed_photo_path, 'rb') as image_file:
-            response = requests.post(
-                'https://api-us.faceplusplus.com/facepp/v3/detect',
-                data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
-                files={'image_file': image_file}
-            )
+        compressed_image.seek(0)  # Reset buffer position
+        response = requests.post(
+            'https://api-us.faceplusplus.com/facepp/v3/detect',
+            data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
+            files={'image_file': compressed_image}
+        )
 
         face_data = response.json()
         if 'faces' not in face_data or len(face_data['faces']) == 0:
