@@ -26,14 +26,13 @@ mongo = PyMongo(app)
 IMGUR_CLIENT_ID = '068bd6a3c24e96a'
 FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
 FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
-FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'  # Ensure this is correctly created in Face++
+FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'
 
 def compress_image(image_file):
     """Compress image before uploading."""
     img = Image.open(image_file)
     img.thumbnail((1024, 1024))  # Resize image
 
-    # Save the compressed image to a byte buffer
     compressed_image = io.BytesIO()
     img.save(compressed_image, format="JPEG", optimize=True, quality=85)
     compressed_image.seek(0)
@@ -79,12 +78,8 @@ def register():
         branch = request.form['branch']
         photo = request.files['photo']
 
-        if not photo:
-            return "Photo is required!", 400
-
-        # Check if uploaded file is an image
-        if not photo.content_type.startswith('image/'):
-            return "Uploaded file is not an image!", 400
+        if not photo or not photo.content_type.startswith('image/'):
+            return "Valid photo is required!", 400
 
         # Compress image before uploading
         compressed_image = compress_image(photo)
@@ -93,14 +88,16 @@ def register():
         imgur_link = upload_to_imgur(compressed_image)
 
         # Detect face with Face++ API
-        compressed_image.seek(0)  # Reset buffer position
-        response = requests.post(
+        compressed_image.seek(0)  # Reset buffer
+        face_response = requests.post(
             'https://api-us.faceplusplus.com/facepp/v3/detect',
             data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
             files={'image_file': compressed_image}
         )
 
-        face_data = response.json()
+        face_data = face_response.json()
+        logging.debug(f"Face++ Detection Response: {face_data}")
+
         if 'faces' not in face_data or len(face_data['faces']) == 0:
             return "No face detected in the image!", 400
 
@@ -111,31 +108,28 @@ def register():
         add_face_to_faceset(face_token)
 
         # Save student data to MongoDB
-        new_student = {
+        mongo.db.students.insert_one({
             'name': name,
             'branch': branch,
             'photo': imgur_link,
             'face_token': face_token
-        }
-        mongo.db.students.insert_one(new_student)
+        })
 
         return redirect(url_for('index'))
+
     return render_template('register.html')
 
 @app.route('/remove_student/<name>', methods=['POST'])
 def remove_student(name):
     result = mongo.db.students.delete_one({'name': name})
-    if result.deleted_count == 0:
-        return "Student not found!", 404
-
-    return redirect(url_for('students_view'))
+    return redirect(url_for('students_view')) if result.deleted_count > 0 else ("Student not found!", 404)
 
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance_view():
     if request.method == 'POST':
         photo = request.files['photo']
-        if not photo:
-            return "Photo is required!", 400
+        if not photo or not photo.content_type.startswith('image/'):
+            return "Valid photo is required!", 400
 
         # Convert image to bytes
         image_bytes = io.BytesIO()
@@ -143,7 +137,7 @@ def attendance_view():
         image_bytes.seek(0)
 
         # Search for the face in the FaceSet
-        response = requests.post(
+        search_response = requests.post(
             'https://api-us.faceplusplus.com/facepp/v3/search',
             data={
                 'api_key': FACEPP_API_KEY,
@@ -153,27 +147,24 @@ def attendance_view():
             files={'image_file': image_bytes}
         )
 
-        result = response.json()
-        logging.debug(f"Face++ search response: {result}")
+        result = search_response.json()
+        logging.debug(f"Face++ Search Response: {result}")
 
         if 'results' in result and len(result['results']) > 0:
             face_token = result['results'][0]['face_token']
             confidence = result['results'][0]['confidence']
             logging.debug(f"Detected face token: {face_token}, Confidence: {confidence}")
 
-            # Confidence threshold
             if confidence < 75:
                 return "Face not recognized with enough confidence!", 400
 
-            # Find the student by face token
             student = mongo.db.students.find_one({'face_token': face_token})
             if student:
-                attendance_record = {
+                mongo.db.attendance.insert_one({
                     'student_name': student['name'],
                     'branch': student['branch'],
                     'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                }
-                mongo.db.attendance.insert_one(attendance_record)
+                })
                 return redirect(url_for('index'))
 
             return "Student not found!", 404
@@ -184,12 +175,12 @@ def attendance_view():
 
 @app.route('/students')
 def students_view():
-    students = mongo.db.students.find()
+    students = list(mongo.db.students.find())
     return render_template('students.html', students=students)
 
 @app.route('/present')
 def present_view():
-    attendance_records = mongo.db.attendance.find()
+    attendance_records = list(mongo.db.attendance.find())
     return render_template('present.html', attendance=attendance_records)
 
 @app.route('/reset_attendance', methods=['POST'])
