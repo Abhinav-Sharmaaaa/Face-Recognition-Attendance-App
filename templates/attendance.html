@@ -9,12 +9,56 @@
 <body>
     <div class="attendance-section">
         <h1>Mark Attendance</h1>
-        <form action="/attendance" method="post" enctype="multipart/form-data">
-            <label for="photo">Upload Your Photo:</label>
-            <input type="file" name="photo" required><br>
+        <form action="/attendance" method="post">
+            <div>
+                <label for="photo">Capture Your Photo:</label>
+                <video id="video" width="320" height="240" autoplay></video>
+                <button type="button" id="snap">Capture</button>
+                <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+                <input type="hidden" name="photo" id="photo" required>
+                <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
+                <button type="button" id="reCapture" style="display:none;">Re-capture</button>
+            </div>
             <button type="submit">Submit</button>
         </form>
         <a href="/">Back to Home</a>
     </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const photoInput = document.getElementById('photo');
+        const snapButton = document.getElementById('snap');
+        const capturedPhoto = document.getElementById('capturedPhoto');
+        const reCaptureButton = document.getElementById('reCapture');
+
+        // Access the camera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                console.error("Error accessing the camera: ", err);
+            });
+
+        // Capture the image
+        snapButton.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataURL = canvas.toDataURL('image/png');
+            photoInput.value = dataURL; // Set the Base64 string to the hidden input
+            capturedPhoto.src = dataURL; // Set the captured image to the img element
+            video.style.display = 'none'; // Hide the video
+            capturedPhoto.style.display = 'block'; // Show the captured photo
+            reCaptureButton.style.display = 'block'; // Show the re-capture button
+        });
+
+        // Re-capture the image
+        reCaptureButton.addEventListener('click', () => {
+            video.style.display = 'block'; // Show the video again
+            capturedPhoto.style.display = 'none'; // Hide the captured photo
+            reCaptureButton.style.display = 'none'; // Hide the re-capture button
+        });
+    </script>
 </body>
 </html>

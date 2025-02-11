@@ -7,6 +7,7 @@ import io
 import logging
 from dotenv import load_dotenv
 from flask_pymongo import PyMongo
+import base64
 
 # Load environment variables
 load_dotenv()
@@ -76,13 +77,14 @@ def register():
     if request.method == 'POST':
         name = request.form['name']
         branch = request.form['branch']
-        photo = request.files['photo']
+        photo_data = request.form['photo']
 
-        if not photo or not photo.content_type.startswith('image/'):
+        if not photo_data or not photo_data.startswith('data:image/'):
             return "Valid photo is required!", 400
 
-        # Compress image before uploading
-        compressed_image = compress_image(photo)
+        # Decode the Base64 string
+        header, encoded = photo_data.split(',', 1)
+        compressed_image = io.BytesIO(base64.b64decode(encoded))
 
         # Upload compressed image to Imgur
         imgur_link = upload_to_imgur(compressed_image)
@@ -122,19 +124,18 @@ def register():
 @app.route('/remove_student/<name>', methods=['POST'])
 def remove_student(name):
     result = mongo.db.students.delete_one({'name': name})
-    return redirect(url_for('students_view')) if result.deleted_count > 0 else ("Student not found!", 404)
+    return redirect(url_for('students_view')) if result.deleted_count >  0 else ("Student not found!", 404)
 
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance_view():
     if request.method == 'POST':
-        photo = request.files['photo']
-        if not photo or not photo.content_type.startswith('image/'):
+        photo_data = request.form['photo']
+        if not photo_data or not photo_data.startswith('data:image/'):
             return "Valid photo is required!", 400
 
-        # Convert image to bytes
-        image_bytes = io.BytesIO()
-        photo.save(image_bytes)
-        image_bytes.seek(0)
+        # Decode the Base64 string
+        header, encoded = photo_data.split(',', 1)
+        image_bytes = io.BytesIO(base64.b64decode(encoded))
 
         # Search for the face in the FaceSet
         search_response = requests.post(
