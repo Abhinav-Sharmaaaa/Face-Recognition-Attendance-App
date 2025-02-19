@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 import requests
 import os
 from datetime import datetime
+import pytz  # Import pytz for timezone handling
 from PIL import Image
 import io
 import logging
@@ -163,10 +164,13 @@ def attendance_view():
 
             student = mongo.db.students.find_one({'face_token': face_token})
             if student:
+                # Set the timezone to Indian Standard Time (IST)
+                ist = pytz.timezone('Asia/Kolkata')
+                current_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
                 mongo.db.attendance.insert_one({
                     'student_name': student['name'],
                     'branch': student['branch'],
-                    'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    'time': current_time
                 })
                 return redirect(url_for('index'))
 
