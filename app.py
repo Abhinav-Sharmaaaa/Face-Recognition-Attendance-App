@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from flask_pymongo import PyMongo
 import base64
+import urllib.parse  # Import urllib.parse
 
 # Load environment variables
 load_dotenv()
@@ -123,8 +124,9 @@ def register():
 
 @app.route('/remove_student/<name>', methods=['POST'])
 def remove_student(name):
-    result = mongo.db.students.delete_one({'name': name})
-    return redirect(url_for('students_view')) if result.deleted_count >  0 else ("Student not found!", 404)
+    decoded_name = urllib.parse.unquote(name)  # Decode the name
+    result = mongo.db.students.delete_one({'name': decoded_name})
+    return redirect(url_for('students_view')) if result.deleted_count > 0 else ("Student not found!", 404)
 
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance_view():
