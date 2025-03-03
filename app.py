@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-import requests
 import os
 from datetime import datetime
 import pytz  # Import pytz for timezone handling
@@ -10,6 +9,7 @@ from dotenv import load_dotenv
 from flask_pymongo import PyMongo
 import base64
 import urllib.parse  # Import urllib.parse
+import face_recognition  # Import face_recognition library
 
 # Load environment variables
 load_dotenv()
@@ -25,50 +25,6 @@ app.secret_key = 'your_secret_key'
 # MongoDB configuration
 app.config['MONGO_URI'] = os.environ.get('MONGO_URI')
 mongo = PyMongo(app)
-
-IMGUR_CLIENT_ID = '068bd6a3c24e96a'
-FACEPP_API_KEY = 'd3exJQVyMXEhVRT-imjnp-GOPetfs6x1'
-FACEPP_API_SECRET = 'pKC4ipn-73qLoaFD7fnK_t4jLjWKaM2q'
-FACEPP_FACESET_TOKEN = '4ee329037a47d8ac0e5d2a85ed496126'
-
-def compress_image(image_file):
-    """Compress image before uploading."""
-    img = Image.open(image_file)
-    img.thumbnail((1024, 1024))  # Resize image
-
-    compressed_image = io.BytesIO()
-    img.save(compressed_image, format="JPEG", optimize=True, quality=85)
-    compressed_image.seek(0)
-    
-    return compressed_image
-
-def upload_to_imgur(image_file):
-    """Uploads an image to Imgur and returns the image URL."""
-    headers = {'Authorization': f'Client-ID {IMGUR_CLIENT_ID}'}
-    response = requests.post(
-        'https://api.imgur.com/3/image',
-        headers=headers,
-        files={'image': image_file}
-    )
-
-    if response.status_code == 200:
-        return response.json()['data']['link']
-    else:
-        raise Exception(f"Imgur upload failed: {response.status_code} - {response.text}")
-
-def add_face_to_faceset(face_token):
-    """Adds a face token to the Face++ FaceSet."""
-    response = requests.post(
-        'https://api-us.faceplusplus.com/facepp/v3/faceset/addface',
-        data={
-            'api_key': FACEPP_API_KEY,
-            'api_secret': FACEPP_API_SECRET,
-            'faceset_token': FACEPP_FACESET_TOKEN,
-            'face_tokens': face_token
-        }
-    )
-    result = response.json()
-    logging.debug(f"FaceSet add response: {result}")
 
 @app.route('/')
 def index():
@@ -86,37 +42,23 @@ def register():
 
         # Decode the Base64 string
         header, encoded = photo_data.split(',', 1)
-        compressed_image = io.BytesIO(base64.b64decode(encoded))
+        image_bytes = io.BytesIO(base64.b64decode(encoded))
 
-        # Upload compressed image to Imgur
-        imgur_link = upload_to_imgur(compressed_image)
+        # Load the image for face recognition
+        image = face_recognition.load_image_file(image_bytes)
+        face_encodings = face_recognition.face_encodings(image)
 
-        # Detect face with Face++ API
-        compressed_image.seek(0)  # Reset buffer
-        face_response = requests.post(
-            'https://api-us.faceplusplus.com/facepp/v3/detect',
-            data={'api_key': FACEPP_API_KEY, 'api_secret': FACEPP_API_SECRET},
-            files={'image_file': compressed_image}
-        )
-
-        face_data = face_response.json()
-        logging.debug(f"Face++ Detection Response: {face_data}")
-
-        if 'faces' not in face_data or len(face_data['faces']) == 0:
+        if len(face_encodings) == 0:
             return "No face detected in the image!", 400
 
-        face_token = face_data['faces'][0]['face_token']
-        logging.debug(f"Registered face token: {face_token}")
-
-        # Add face to FaceSet
-        add_face_to_faceset(face_token)
+        # Use the first face encoding
+        face_encoding = face_encodings[0]
 
         # Save student data to MongoDB
         mongo.db.students.insert_one({
             'name': name,
             'branch': branch,
-            'photo': imgur_link,
-            'face_token': face_token
+            'face_encoding': face_encoding.tolist()  # Convert numpy array to list
         })
 
         return redirect(url_for('index'))
@@ -140,30 +82,19 @@ def attendance_view():
         header, encoded = photo_data.split(',', 1)
         image_bytes = io.BytesIO(base64.b64decode(encoded))
 
-        # Search for the face in the FaceSet
-        search_response = requests.post(
-            'https://api-us.faceplusplus.com/facepp/v3/search',
-            data={
-                'api_key': FACEPP_API_KEY,
-                'api_secret': FACEPP_API_SECRET,
-                'faceset_token': FACEPP_FACESET_TOKEN
-            },
-            files={'image_file': image_bytes}
-        )
+        # Load the image for face recognition
+        image = face_recognition.load_image_file(image_bytes)
+        face_encodings = face_recognition.face_encodings(image)
 
-        result = search_response.json()
-        logging.debug(f"Face++ Search Response: {result}")
+        if len(face_encodings) == 0:
+            return "No face detected in the image!", 400
 
-        if 'results' in result and len(result['results']) > 0:
-            face_token = result['results'][0]['face_token']
-            confidence = result['results'][0]['confidence']
-            logging.debug(f"Detected face token: {face_token}, Confidence: {confidence}")
+        # Compare with stored face encodings
+        for student in mongo.db.students.find():
+            stored_encoding = student['face_encoding']
+            results = face_recognition.compare_faces([stored_encoding], face_encodings[0])
 
-            if confidence < 75:
-                return "Face not recognized with enough confidence!", 400
-
-            student = mongo.db.students.find_one({'face_token': face_token})
-            if student:
+            if results[0]:
                 # Set the timezone to Indian Standard Time (IST)
                 ist = pytz.timezone('Asia/Kolkata')
                 current_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
@@ -174,9 +105,7 @@ def attendance_view():
                 })
                 return redirect(url_for('index'))
 
-            return "Student not found!", 404
-        else:
-            return "No matching face found!", 400
+        return "No matching face found!", 400
 
     return render_template('attendance.html')
 
