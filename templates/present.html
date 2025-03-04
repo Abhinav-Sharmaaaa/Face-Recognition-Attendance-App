@@ -6,14 +6,12 @@
     <title>Attendance</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
-        /* Centering everything */
         .container {
             text-align: center;
         }
 
-        /* Table styling */
         table {
-            margin: 0 auto; /* Centers the table */
+            margin: 0 auto;
             border-collapse: collapse;
             width: 80%;
         }
@@ -24,18 +22,17 @@
             text-align: center;
         }
 
-        /* Reset button styling */
         #resetButton {
             background-color: #ff4d4d;
             color: white;
-            width: 100px; /* Smaller width */
+            width: 100px;
             padding: 8px;
             font-size: 14px;
             border: none;
-            border-radius: 6px; /* Rounded edges */
+            border-radius: 6px;
             cursor: pointer;
             margin-top: 20px;
-            display: inline-block; /* Prevents full width */
+            display: inline-block;
             transition: background 0.3s;
         }
 
@@ -43,39 +40,65 @@
             background-color: #cc0000;
         }
 
-        /* Success message styling*/
         #resetMessage {
             display: none;
             color: green;
             margin-top: 10px;
+        }
+
+        #errorMessage {
+            display: none;
+            color: red;
+            margin-top: 10px;
+        }
+
+        /* Responsive Table */
+        @media (max-width: 600px) {
+            table {
+                width: 100%;
+            }
+            th, td {
+                display: block;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            thead {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Attendance Records</h1>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Branch</th>
-                    <th>Time</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for record in attendance %}
-                <tr>
-                    <td>{{ record.student_name }}</td>
-                    <td>{{ record.branch }}</td>
-                    <td>{{ record.time }}</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% if attendance %}
+            <table>
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Branch</th>
+                        <th scope="col">Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in attendance %}
+                        <tr>
+                            <td>{{ record.name | default('N/A') }}</td>
+                            <td>{{ record.branch | default('N/A') }}</td>
+                            <td>{{ record.time | default('N/A') }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No attendance records found.</p>
+        {% endif %}
 
-        <!-- Centered Reset Button -->
-        <button id="resetButton">Reset</button>
-        <p id="resetMessage">Attendance has been reset.</p>
+        <form id="resetForm" action="/reset_attendance" method="post">
+            <button id="resetButton" type="button">Reset</button>
+            <p id="resetMessage" style="display: none;">Attendance has been reset.</p>
+            <p id="errorMessage" style="display: none; color: red;"></p>
+        </form>
 
         <br>
         <a href="/">Back to Home</a>
@@ -83,21 +106,26 @@
 
     <script>
         document.getElementById("resetButton").addEventListener("click", function() {
-            // Prompt for password
             let password = prompt("Please enter the password to reset attendance records:");
-            
             if (password === "9999") {
                 if (confirm("Are you sure you want to reset all attendance records?")) {
-                    fetch("/reset_attendance", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        document.getElementById("resetMessage").style.display = "block";
-                        setTimeout(() => location.reload(), 1000);
-                    })
-                    .catch(error => console.error("Error:", error));
+                    fetch("/reset_attendance", { method: "POST" })
+                        .then(response => {
+                            if (response.ok) {
+                                return response.json();
+                            } else {
+                                throw new Error("Network response was not ok.");
+                            }
+                        })
+                        .then(data => {
+                            document.getElementById("resetMessage").style.display = "block";
+                            setTimeout(() => location.reload(), 1000);
+                        })
+                        .catch(error => {
+                            console.error("Error:", error);
+                            document.getElementById("errorMessage").textContent = "An error occurred. Please try again.";
+                            document.getElementById("errorMessage").style.display = "block";
+                        });
                 }
             } else {
                 alert("Incorrect password!");
