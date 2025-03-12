@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Attendance System</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- External CSS File -->
+    <link rel="stylesheet" href="../static/styles.css">
+</head>
+<body class="d-flex align-items-center justify-content-center min-vh-100">
+
+    <div class="container text-center">
+        <h1 class="mb-4">Select User Type</h1>
+        <form method="POST" action="/login">
+            <button type="button" onclick="showPasswordField('admin')" class="btn btn-primary btn-lg mb-3">Admin</button>
+            <button type="button" onclick="login('student')" class="btn btn-secondary btn-lg">Student</button>
+            <div id="admin-password" style="display: none;">
+                <input type="password" name="admin_password" placeholder="Enter Admin Password" class="form-control mt-3" required>
+                <input type="hidden" name="user_type" value="admin">
+                <button type="submit" class="btn btn-primary mt-2">Login as Admin</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showPasswordField(userType) {
+            if (userType === 'admin') {
+                document.getElementById('admin-password').style.display = 'block';
+            }
+        }
+
+        function login(userType) {
+            // For student login, submit the form directly
+            document.querySelector('input[name="user_type"]').value = userType;
+            document.querySelector('form').submit();
+        }
+    </script>
+</body>
+</html>
