@@ -1,33 +1,35 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import os
 from datetime import datetime
-import pytz  # Import pytz for timezone handling
-import cv2  # Import OpenCV
+import pytz
+import cv2
 import numpy as np
 import io
 import logging
 from dotenv import load_dotenv
 from flask_pymongo import PyMongo
 import base64
-import urllib.parse  # Import urllib.parse
-from scipy.spatial.distance import cosine  # Import cosine from scipy
+import urllib.parse
+from scipy.spatial.distance import cosine
+from werkzeug.utils import secure_filename
 
-# Load environment variables
 load_dotenv()
 
-# Configure logging
 logging.basicConfig(level=logging.DEBUG)
 pymongo_logger = logging.getLogger('pymongo')
-pymongo_logger.setLevel(logging.WARNING)  # Suppress pymongo debug logs
+pymongo_logger.setLevel(logging.WARNING)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-# MongoDB configuration
 app.config['MONGO_URI'] = os.environ.get('MONGO_URI')
 mongo = PyMongo(app)
 
-# Load the Haar Cascade for face detection
+# Directory to save uploaded photos
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
 @app.route('/')
@@ -36,25 +38,46 @@ def index():
         return redirect(url_for('login'))
     return render_template('index.html')
 
+@app.route('/student_index')
+def student_index():
+    if session.get('user_type') == 'student':
+        return render_template('student_index.html')
+    return redirect(url_for('login'))
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         name = request.form['name']
         branch = request.form['branch']
-        photo_data = request.form['photo']
+        photo_data = request.form['photo']  # Captured photo (Base64)
+        uploaded_file = request.files.get('uploadPhoto')  # Uploaded photo file
 
-        if not photo_data or not photo_data.startswith('data:image/'):
-            return "Valid photo is required!", 400
+        # Check if at least one photo is provided
+        if not photo_data and not uploaded_file:
+            return "A photo is required!", 400
 
-        # Decode the Base64 string
-        header, encoded = photo_data.split(',', 1)
-        image_bytes = io.BytesIO(base64.b64decode(encoded))
+        existing_student = mongo.db.students.find_one({'name': name})
+        if existing_student:
+            return "Student already registered!", 400
 
-        # Convert the image bytes to a numpy array
-        nparr = np.frombuffer(image_bytes.getvalue(), np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        image = None
 
-        # Convert the image to grayscale for face detection
+        if photo_data and photo_data.startswith('data:image/'):
+            # Process the captured photo
+            header, encoded = photo_data.split(',', 1)
+            image_bytes = io.BytesIO(base64.b64decode(encoded))
+            nparr = np.frombuffer(image_bytes.getvalue(), np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        elif uploaded_file:
+            # Process the uploaded photo
+            filename = secure_filename(uploaded_file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            uploaded_file.save(file_path)
+            image = cv2.imread(file_path)
+
+        if image is None:
+            return "No valid image provided!", 400
+
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Detect faces in the image
@@ -91,26 +114,35 @@ def remove_student(name):
 @app.route('/attendance', methods=['GET', 'POST'])
 def attendance_view():
     if request.method == 'POST':
-        photo_data = request.form['photo']
-        print("Received photo data:", photo_data)  # Debugging line
+        photo_data = request.form['photo']  # Captured photo (Base64)
+        uploaded_file = request.files.get('uploadPhoto')  # Uploaded photo file
 
-        if not photo_data or not photo_data.startswith('data:image/'):
-            return "Valid photo is required!", 400
+        # Check if at least one photo is provided
+        if not photo_data and not uploaded_file:
+            return "A photo is required!", 400
 
-        # Decode the Base64 string
-        header, encoded = photo_data.split(',', 1)
-        image_bytes = io.BytesIO(base64.b64decode(encoded))
+        image = None
 
-        # Convert the image bytes to a numpy array
-        nparr = np.frombuffer(image_bytes.getvalue(), np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if photo_data and photo_data.startswith('data:image/'):
+            # Process the captured photo
+            header, encoded = photo_data.split(',', 1)
+            image_bytes = io.BytesIO(base64.b64decode(encoded))
+            nparr = np.frombuffer(image_bytes.getvalue(), np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        elif uploaded_file:
+            # Process the uploaded photo
+            filename = secure_filename(uploaded_file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            uploaded_file.save(file_path)
+            image = cv2.imread(file_path)
 
-        # Convert the image to grayscale for face detection
+        if image is None:
+            return "No valid image provided!", 400
+
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         # Detect faces in the image
         faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
-        print(f"Detected faces: {len(faces)}")  # Debugging line
 
         if len(faces) == 0:
             return "No face detected in the image!", 400
@@ -123,8 +155,22 @@ def attendance_view():
         face_image_resized = cv2.resize(face_image, (128, 128))
         face_encoding = face_image_resized.flatten().tolist()  # Flatten the resized image
 
+        # Check if today is Sunday
+        if datetime.now().weekday() == 6:  # 6 corresponds to Sunday
+            return render_template('holiday.html')  # Render a holiday prompt
+
+        # Check if the student has already marked attendance today
+        today = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d')
+        existing_attendance = mongo.db.attendance.find_one({
+            'time': {'$regex': today}  # Check for today's date in the time field
+        })
+
+        if existing_attendance:
+            return render_template('already_marked.html')  # Render already marked prompt
+
         best_match = None
         best_similarity = float('inf')  # Set initial similarity to a high value
+        student_name = None  # Variable to store the student's name
 
         # Compare with stored face encodings
         for student in mongo.db.students.find():
@@ -135,19 +181,20 @@ def attendance_view():
             if similarity < best_similarity:  # Find the best match (lowest cosine distance)
                 best_similarity = similarity
                 best_match = student
+                student_name = student['name']  # Store the matching student's name
 
         if best_match and best_similarity < 0.4:  # Ensure it's below a reliable threshold
             # Set the timezone to Indian Standard Time (IST)
             ist = pytz.timezone('Asia/Kolkata')
             current_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
 
-            # Store attendance
+            # Store attendance with the student's name
             mongo.db.attendance.insert_one({
-                'name': best_match['name'],
+                'name': student_name,  # Store the student's name
                 'branch': best_match['branch'],
                 'time': current_time
             })
-            print(f"Attendance recorded for {best_match['name']} at {current_time}")  # Debugging line
+            print(f"Attendance recorded for {student_name} at {current_time}")  # Debugging line
             return redirect(url_for('index'))
 
         return "No matching student found!", 404
@@ -170,6 +217,24 @@ def reset_attendance_route():
     mongo.db.attendance.delete_many({})
     return jsonify({"message": "Attendance has been reset."}), 200
 
+@app.route('/upload_photo', methods=['GET', 'POST'])
+def upload_photo():
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        if 'photo' not in request.files:
+            return "No file part", 400
+        file = request.files['photo']
+        if file.filename == '':
+            return "No selected file", 400
+        if file:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            return redirect(url_for('index'))
+
+    return render_template('upload_photo.html')
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -178,14 +243,14 @@ def login():
             admin_password = request.form.get('admin_password')
             if admin_password == '0000':  # Check for the admin password
                 session['user_type'] = user_type
-                print(f"User  type set in session: {session['user_type']}")  # Debugging line
+                print(f"User    type set in session: {session['user_type']}")  # Debugging line
                 return redirect(url_for('index'))
             else:
                 return "Invalid admin password!", 403  # Forbidden
         elif user_type == 'student':
             session['user_type'] = user_type
-            print(f"User  type set in session: {session['user_type']}")  # Debugging line
-            return redirect(url_for('attendance_view'))
+            print(f"User    type set in session: {session['user_type']}")  # Debugging line
+            return redirect(url_for('student_index'))  # Redirect to student index  
         return "Invalid user type!", 400
     return render_template('login.html')  # Render the login page
 
@@ -204,12 +269,13 @@ def restrict_access():
         return redirect(url_for('login'))
 
     # Allow admin to access index and attendance
-    if request.endpoint in ['index', 'attendance_view'] and session.get('user_type') == 'admin':
+    if session.get('user_type') == 'admin':
         return None
 
     # Allow student to access attendance
-    if request.endpoint == 'attendance_view' and session.get('user_type') == 'student':
-        return None
+    if session.get('user_type') == 'student':
+        if request.endpoint in ['attendance_view', 'student_index']:
+            return None
 
     return redirect(url_for('login'))
 

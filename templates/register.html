@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>Register a Student</h1>
-    <form id="registerForm" action="/register" method="post">
+    <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
         Name: <input type="text" name="name" required><br>
         
         Branch: 
@@ -31,6 +31,12 @@
             <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
             <button type="button" id="reCapture" style="display:none;">Re-capture</button>
         </div>
+
+        <div>
+            <label for="uploadPhoto">Or Upload Photo:</label>
+            <input type="file" name="uploadPhoto" id="uploadPhoto" accept="image/*">
+        </div>
+
         <button type="submit">Register</button>
     </form>
     <a href="/">Back to Home</a>

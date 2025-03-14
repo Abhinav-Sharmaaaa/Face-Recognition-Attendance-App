@@ -9,7 +9,7 @@
 <body>
     <div class="attendance-section">
         <h1>Mark Attendance</h1>
-        <form action="/attendance" method="post">
+        <form action="/attendance" method="post" enctype="multipart/form-data">
             <div>
                 <label for="photo">Capture Your Photo:</label>
                 <video id="video" width="320" height="240" autoplay></video>
@@ -19,6 +19,14 @@
                 <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
                 <button type="button" id="reCapture" style="display:none;">Re-capture</button>
             </div>
+
+            {% if session.get('user_type') == 'admin' %}
+            <div>
+                <label for="uploadPhoto">Or Upload Photo:</label>
+                <input type="file" name="uploadPhoto" id="uploadPhoto" accept="image/*">
+            </div>
+            {% endif %}
+
             <button type="submit">Submit</button>
         </form>
         <a href="/">Back to Home</a>
@@ -47,6 +55,7 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataURL = canvas.toDataURL('image/png');
             photoInput.value = dataURL; // Set the Base64 string to the hidden input
+            console.log("Captured photo data:", dataURL); // Log the captured photo data
             capturedPhoto.src = dataURL; // Set the captured image to the img element
             video.style.display = 'none'; // Hide the video
             capturedPhoto.style.display = 'block'; // Show the captured photo

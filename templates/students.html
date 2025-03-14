@@ -5,23 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script>
-        function confirmDelete(event, name) {
-            // Prompt for the password
-            const password = prompt(`Enter the password to delete ${name}:`);
-            
-            // Validate the password
-            if (password === "0000") {
-                // If password is correct, proceed with form submission
-                return true;
-            } else {
-                // If password is incorrect, prevent form submission
-                alert("Incorrect password. Deletion canceled.");
-                event.preventDefault();
-                return false;
-            }
-        }
-    </script>
 </head>
 <body>
     <h1>Registered Students</h1>
@@ -50,5 +33,17 @@
         </table>
     </div>
     <a href="/">Back to Home</a>
+
+    <script>
+        function confirmDelete(event, name) {
+            // Remove the password prompt
+            if (confirm(`Are you sure you want to delete ${name}?`)) {
+                return true; // Proceed with form submission
+            } else {
+                event.preventDefault(); // Prevent form submission
+                return false;
+            }
+        }
+    </script>
 </body>
 </html>
