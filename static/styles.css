@@ -1,7 +1,7 @@
 /* General Styles */
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to bottom, #f0f8ff, #d0e7ff); /* Light gradient blue background */
+    background: linear-gradient(to bottom, #f0f8ff, #91c1f4); /* Light gradient blue background */
     color: #004080; /* Dark blue text */
     margin: 0;
     padding: 0;
@@ -187,4 +187,29 @@ a {
 
 a:hover {
     text-decoration: underline;
+}
+/* Login Page Styles */
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+.login-container {
+    width: 350px;
+    text-align: center;
+}
+
+h1 {
+    font-weight: 600;
+}
+
+button {
+    font-weight: 500;
+}
+
+#admin-password {
+    transition: all 0.3s ease-in-out;
+}
+
+.d-none {
+    display: none;
 }
