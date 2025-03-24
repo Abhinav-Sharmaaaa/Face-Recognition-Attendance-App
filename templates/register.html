@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register Student</title>
-    <link rel="stylesheet" href="../static/styles.css"> <!-- Link to external CSS file -->
+    <link rel="stylesheet" href="../static/styles.css"> 
 </head>
 <body>
     <h1>Register a Student</h1>
@@ -49,7 +49,6 @@
         const capturedPhoto = document.getElementById('capturedPhoto');
         const reCaptureButton = document.getElementById('reCapture');
 
-        // Access the camera
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
@@ -57,24 +56,22 @@
             .catch(err => {
                 console.error("Error accessing the camera: ", err);
             });
-
-        // Capture the image
         snapButton.addEventListener('click', () => {
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataURL = canvas.toDataURL('image/png');
-            photoInput.value = dataURL; // Set the Base64 string to the hidden input
-            capturedPhoto.src = dataURL; // Set the captured image to the img element
-            video.style.display = 'none'; // Hide the video
-            capturedPhoto.style.display = 'block'; // Show the captured photo
-            reCaptureButton.style.display = 'block'; // Show the re-capture button
+            photoInput.value = dataURL; 
+            capturedPhoto.src = dataURL; 
+            video.style.display = 'none';
+            capturedPhoto.style.display = 'block';
+            reCaptureButton.style.display = 'block';
         });
 
-        // Re-capture the image
+       
         reCaptureButton.addEventListener('click', () => {
-            video.style.display = 'block'; // Show the video again
-            capturedPhoto.style.display = 'none'; // Hide the captured photo
-            reCaptureButton.style.display = 'none'; // Hide the re-capture button
+            video.style.display = 'block'; 
+            capturedPhoto.style.display = 'none'; 
+            reCaptureButton.style.display = 'none'; 
         });
     </script>
 </body>

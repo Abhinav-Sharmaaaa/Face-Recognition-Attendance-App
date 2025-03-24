@@ -36,11 +36,11 @@
 
     <script>
         function confirmDelete(event, name) {
-            // Remove the password prompt
+            
             if (confirm(`Are you sure you want to delete ${name}?`)) {
-                return true; // Proceed with form submission
+                return true;
             } else {
-                event.preventDefault(); // Prevent form submission
+                event.preventDefault();
                 return false;
             }
         }

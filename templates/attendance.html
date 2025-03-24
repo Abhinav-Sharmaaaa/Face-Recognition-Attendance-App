@@ -10,7 +10,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh; /* Full height of the viewport */
+            height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
             background-color: #f0f8ff;
@@ -22,8 +22,8 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            width: 400px; /* Fixed width for the section */
-            max-width: 90%; /* Responsive max width */
+            width: 400px; 
+            max-width: 90%;
         }
 
         h1 {
@@ -82,9 +82,7 @@
             <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none;">
             <button type="button" id="reCapture" style="display:none;">Re-capture</button>
 
-            <!-- Uncomment the following lines if you want to allow file uploads -->
-            <!-- <label for="uploadPhoto">Or Upload Photo:</label>
-            <input type="file" name="uploadPhoto" id="uploadPhoto" accept="image/*"> -->
+        
 
             <button type="submit">Submit</button>
         </form>
@@ -99,7 +97,6 @@
         const capturedPhoto = document.getElementById('capturedPhoto');
         const reCaptureButton = document.getElementById('reCapture');
 
-        // Access the user's camera
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => {
                 video.srcObject = stream;
@@ -108,7 +105,7 @@
                 console.error("Error accessing the camera: ", err);
             });
 
-        // Capture the photo when the button is clicked
+        
         snapButton.addEventListener('click', () => {
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -120,7 +117,7 @@
             reCaptureButton.style.display = 'block';
         });
 
-        // Allow the user to re-capture the photo
+        
         reCaptureButton.addEventListener('click', () => {
             video.style.display = 'block';
             capturedPhoto.style.display = 'none';

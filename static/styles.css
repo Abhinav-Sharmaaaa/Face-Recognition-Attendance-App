@@ -1,8 +1,8 @@
-/* General Styles */
+
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to bottom, #f0f8ff, #91c1f4); /* Light gradient blue background */
-    color: #004080; /* Dark blue text */
+    background: linear-gradient(to bottom, #f0f8ff, #91c1f4); 
+    color: #004080; 
     margin: 0;
     padding: 0;
 }
@@ -11,7 +11,7 @@ body {
     text-align: center;
 }
 
-/* Logo Styling */
+
 .logo {
     width: 150px;
     margin-bottom: 20px;
@@ -19,11 +19,11 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Welcome Text */
+
 .welcome-text {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #002f6c; /* Deep blue */
+    color: #002f6c; 
 }
 
 .sub-text {
@@ -32,7 +32,7 @@ body {
     margin-bottom: 30px;
 }
 
-/* Button Container */
+
 .button-container {
     display: flex;
     flex-wrap: wrap;
@@ -40,7 +40,7 @@ body {
     gap: 15px;
 }
 
-/* Buttons */
+
 .btn-option {
     display: flex;
     flex-direction: column;
@@ -81,11 +81,10 @@ body {
         flex-direction: column;
     }
 }
-/* for register.html */
-/* General Styles */
+
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f8ff; /* Light blue background */
+    background-color: #f0f8ff; 
     color: #333;
     margin: 0;
     padding: 0;
@@ -96,7 +95,6 @@ body {
     min-height: 100vh;
 }
 
-/* Header */
 h1 {
     color: #0056b3;
     font-size: 30px;
@@ -104,7 +102,7 @@ h1 {
     margin-bottom: 20px;
 }
 
-/* Form Container */
+
 form {
     background-color: #ffffff;
     padding: 25px;
@@ -114,7 +112,7 @@ form {
     text-align: center;
 }
 
-/* Labels */
+
 form label {
     font-size: 18px;
     font-weight: bold;
@@ -123,14 +121,14 @@ form label {
     margin-top: 10px;
 }
 
-/* Bold "Name" Label */
+
 form input[name="name"] + br::before {
     content: " ";
     font-size: 20px;
     font-weight: bold;
 }
 
-/* Input Fields with Color Effect */
+
 input[type="text"], select {
     width: 100%;
     padding: 12px;
@@ -141,7 +139,7 @@ input[type="text"], select {
     transition: all 0.3s ease-in-out;
 }
 
-/* Color Effect on Focus */
+
 input[type="text"]:focus, select:focus {
     border-color: #0056b3;
     background-color: #e6f0ff;
@@ -149,7 +147,7 @@ input[type="text"]:focus, select:focus {
     box-shadow: 0 0 8px rgba(0, 86, 179, 0.5);
 }
 
-/* Button Styling */
+
 button {
     background-color: #0056b3;
     color: white;
@@ -166,7 +164,7 @@ button:hover {
     background-color: #003d80;
 }
 
-/* Camera Section */
+
 #video, #capturedPhoto {
     width: 100%;
     max-width: 340px;
@@ -175,7 +173,7 @@ button:hover {
     margin: 12px 0;
 }
 
-/* Link Styling */
+
 a {
     display: inline-block;
     margin-top: 18px;
@@ -188,7 +186,7 @@ a {
 a:hover {
     text-decoration: underline;
 }
-/* Login Page Styles */
+
 body {
     font-family: 'Poppins', sans-serif;
 }
