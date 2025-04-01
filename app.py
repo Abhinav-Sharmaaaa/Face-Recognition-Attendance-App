@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response
 import os
 from datetime import datetime
 import pytz
@@ -36,6 +36,81 @@ def index():
     if session.get('user_type') != 'admin':
         return redirect(url_for('login'))
     return render_template('index.html')
+
+@app.route('/live_feed')
+def live_feed():
+    return render_template('live_feed.html')
+
+def generate_frames():
+    cap = cv2.VideoCapture(0)  
+    while True:
+        success, frame = cap.read()  
+        if not success:
+            break
+        else:
+            frame = cv2.flip(frame, 1)  
+
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+
+            for (x, y, w, h) in faces:
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)  
+
+                face_image = frame[y:y+h, x:x+w]
+                face_image_resized = cv2.resize(face_image, (128, 128))
+                face_encoding = face_image_resized.flatten().tolist()  
+
+                # Skip attendance marking on Sundays
+                if datetime.now().weekday() == 6:  
+                    continue  
+
+                today = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d')
+                existing_attendance = mongo.db.attendance.find_one({
+                    'time': {'$regex': today}  
+                })
+
+                # If attendance is already marked today, skip marking
+                if existing_attendance:
+                    continue  
+
+                best_match = None
+                best_similarity = float('inf')  
+
+                # Compare with stored face encodings
+                for student in mongo.db.students.find():
+                    stored_encoding = student['face_encoding']
+                    similarity = cosine(face_encoding, stored_encoding)  
+
+                    # Debugging: Print similarity scores
+                    print(f"Comparing with {student['name']}: Similarity = {similarity}")
+
+                    if similarity < best_similarity:  
+                        best_similarity = similarity
+                        best_match = student
+
+                # Mark attendance if a match is found
+                if best_match and best_similarity < 0.4:  
+                    ist = pytz.timezone('Asia/Kolkata')
+                    current_time = datetime.now(ist).strftime('%Y-%m-%d %H:%M:%S')
+
+                    # Insert attendance record
+                    mongo.db.attendance.insert_one({
+                        'name': best_match['name'],
+                        'branch': best_match['branch'],
+                        'time': current_time
+                    })
+                    print(f"Attendance recorded for {best_match['name']} at {current_time}")
+
+            # Encode the frame in JPEG format
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                        
+@app.route('/video_feed')
+def video_feed():
+    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/student_index')
 def student_index():
