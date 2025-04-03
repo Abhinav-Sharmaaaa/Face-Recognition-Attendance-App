@@ -5,15 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        /* Add some basic styling for the search input and dropdown */
+        #searchInput, #branchSelect {
+            margin-bottom: 10px;
+            padding: 5px;
+            width: 200px;
+        }
+        .sortable:hover {
+            cursor: pointer;
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
     <h1>Registered Students</h1>
+    
+    <input type="text" id="searchInput" placeholder="Search for names or branches..">
+    
+    <select id="branchSelect">
+        <option value="">All Branches</option>
+        <option value="C.S.E.">C.S.E.</option>
+        <option value="I.T.">I.T.</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Mechanical">Mechanical</option>
+        <option value="Automobile">Automobile</option>
+        <option value="Civil">Civil</option>
+        <option value="Pharmacy">Pharmacy</option>
+    </select>
+
     <div class="container">
-        <table>
+        <table id="studentsTable" data-sort-order="asc">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Branch</th>
+                    <th class="sortable" onclick="sortTable(0)">Name</th>
+                    <th class="sortable" onclick="sortTable(1)">Branch</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -36,13 +62,57 @@
 
     <script>
         function confirmDelete(event, name) {
-            
             if (confirm(`Are you sure you want to delete ${name}?`)) {
                 return true;
             } else {
                 event.preventDefault();
                 return false;
             }
+        }
+
+        // Function to sort the table
+        function sortTable(columnIndex) {
+            const table = document.getElementById("studentsTable");
+            const rows = Array.from(table.rows).slice(1); // Exclude header row
+            const isAscending = table.getAttribute("data-sort-order") === "asc";
+
+            rows.sort((a, b) => {
+                const cellA = a.cells[columnIndex].innerText.toLowerCase();
+                const cellB = b.cells[columnIndex].innerText.toLowerCase();
+
+                if (cellA < cellB) return isAscending ? -1 : 1;
+                if (cellA > cellB) return isAscending ? 1 : -1;
+                return 0;
+            });
+
+            // Append sorted rows back to the table
+            rows.forEach(row => table.appendChild(row));
+
+            // Toggle sort order
+            table.setAttribute("data-sort-order", isAscending ? "desc" : "asc");
+        }
+
+        // Function to filter the table based on search input and branch selection
+        document.getElementById("searchInput").addEventListener("keyup", filterTable);
+        document.getElementById("branchSelect").addEventListener("change", filterTable);
+
+        function filterTable() {
+            const searchInput = document.getElementById("searchInput").value.toLowerCase();
+            const branchSelect = document.getElementById("branchSelect").value;
+            const rows = document.querySelectorAll("#studentsTable tbody tr");
+
+            rows.forEach(row => {
+                const nameCell = row.cells[0].innerText.toLowerCase();
+                const branchCell = row.cells[1].innerText.toLowerCase();
+                const matchesSearch = nameCell.includes(searchInput) || branchCell.includes(searchInput);
+                const matchesBranch = branchSelect === "" || branchCell === branchSelect.toLowerCase();
+
+                if (matchesSearch && matchesBranch) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
         }
     </script>
 </body>
