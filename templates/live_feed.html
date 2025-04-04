@@ -1,12 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Feed</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Live Feed</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      height: 100vh;
+      background: linear-gradient(-20deg, #d0e7ff, #f0f8ff, #cceeff, #ffffff);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1.live-feed-text {
+      font-size: 3rem;
+      color: #005baa;
+      margin-bottom: 30px;
+      font-weight: 600;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    h1.live-feed-text::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      bottom: -10px;
+      transform: translateX(-50%);
+      height: 4px;
+      width: 60px;
+      background-color: #0077cc;
+      border-radius: 2px;
+    }
+
+    .video-wrapper {
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 15px 30px rgba(0, 123, 255, 0.25);
+      border: 5px solid #0077cc;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .video-wrapper:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 40px rgba(0, 123, 255, 0.3);
+    }
+
+    img {
+      display: block;
+      width: 640px;
+      height: 480px;
+    }
+
+    @media (max-width: 700px) {
+      img {
+        width: 90vw;
+        height: auto;
+      }
+    }
+  </style>
 </head>
 <body>
-    <h1>Live Feed</h1>
-    <img src="{{ url_for('video_feed') }}" style="width: 640px; height: 480px;" />
+  <h1 class="live-feed-text">Live Feed</h1>
+  <div class="video-wrapper">
+    <img src="{{ url_for('video_feed') }}" alt="Live video stream" />
+  </div>
 </body>
 </html>
