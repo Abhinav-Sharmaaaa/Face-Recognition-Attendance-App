@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seen Log</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .log-image {
+            max-width: 100px;
+            max-height: 100px;
+            display: block; /* Prevents extra space below image */
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+            text-decoration: none;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Sighting Log</h1>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Name / ID</th>
+                <th>Timestamp</th>
+                <th>Status at Log</th>
+                <th>Image (if unknown)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if logs %}
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.type }}</td>
+                    <td>{{ log.name if log.type == 'known_sighting' else 'Unknown' }}</td>
+                    <td>{{ log.timestamp_str }}</td>
+                    <td>{{ log.status_at_log }}</td>
+                    <td>
+                        {% if log.type == 'unknown_sighting' and log.face_image_base64 %}
+                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face" class="log-image">
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center;">No log entries found.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('index') }}" class="back-link">Back to Admin Dashboard</a>
+
+</body>
+</html>

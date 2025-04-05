@@ -246,9 +246,11 @@ def generate_frames():
         return
 
     frame_count = 0
-    process_every_n_frames = 3 
-    last_known_faces = {}      
+    process_every_n_frames = 3
+    last_known_faces = {}
+    session_seen_known_faces = {} # Track known faces seen in this generator session
     india_tz = pytz.timezone('Asia/Kolkata')
+    seen_log_collection = mongo.db.seen_log # Collection for logging seen faces
 
     while True:
         success, frame = cap.read()
@@ -351,10 +353,55 @@ def generate_frames():
                      status_color = (255, 0, 255) 
                      current_detected_faces[0] = {'box': box, 'status': status_text, 'color': status_color}
 
-            
-            
-            last_known_faces = current_detected_faces if box else {}
-            
+                # --- Refined Logging Logic ---
+                if box: # Only proceed if a face box was detected
+                    if student_name: # Known face detected
+                        # Removed session check to log every sighting
+                        # session_seen_known_faces[student_name] = current_time_india # Mark as seen in this session
+                        log_entry = {
+                            'type': 'known_sighting',
+                                'name': student_name,
+                                'timestamp': current_time_india,
+                                'status_at_log': status_text # Log the status when first seen
+                            }
+                        try: # <-- Corrected indentation
+                            seen_log_collection.insert_one(log_entry)
+                            logging.info(f"Logged sighting of known face: {student_name}") # Changed log message slightly
+                        except Exception as db_err:
+                            logging.error(f"Error inserting known sighting log for {student_name}: {db_err}")
+                        # No 'else' needed here, log every time if known
+
+                    elif status_text == "Unknown Face": # Unknown face detected
+                        # Log unknown faces every time they appear
+                        log_entry = {
+                            'type': 'unknown_sighting',
+                            'timestamp': current_time_india,
+                            'status_at_log': status_text
+                        }
+                        # Add cropped face image for unknown faces
+                        try:
+                            (x, y, w, h) = box
+                            if x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= processing_frame.shape[1] and y + h <= processing_frame.shape[0]:
+                                cropped_face = processing_frame[y:y+h, x:x+w]
+                                if cropped_face.size > 0:
+                                    _, buffer = cv2.imencode('.jpg', cropped_face)
+                                    log_entry['face_image_base64'] = base64.b64encode(buffer).decode('utf-8')
+                                    try:
+                                        seen_log_collection.insert_one(log_entry)
+                                        logging.info(f"Logged unknown face sighting with image.")
+                                    except Exception as db_err:
+                                        logging.error(f"Error inserting unknown sighting log: {db_err}")
+                                else:
+                                    logging.warning("Cropped unknown face is empty, skipping log.")
+                            else:
+                                logging.warning(f"Invalid box coordinates for cropping unknown face: {box}, frame shape: {processing_frame.shape}")
+                        except Exception as crop_err:
+                                logging.error(f"Error cropping/encoding unknown face for seen log: {crop_err}")
+                # --- End Logging Logic --- # Removed duplicate logging block
+
+            # Update last known faces for display smoothing
+            last_known_faces = current_detected_faces if box else {} # Keep this for smoother display
+
             display_faces = current_detected_faces
 
         else:
@@ -771,9 +818,33 @@ def restrict_access():
     if session.get('user_type') == 'student':
         if request.endpoint in ['attendance_view', 'student_index']:
             return None
-
     return redirect(url_for('login'))
+
+
+# --- New Route for Seen Log ---
+@app.route('/seen_log')
+def seen_log_view():
+    if session.get('user_type') != 'admin':
+        return redirect(url_for('login'))
+    try:
+        # Fetch logs, sort by timestamp descending, limit for performance if needed
+        log_records = list(mongo.db.seen_log.find().sort('timestamp', -1).limit(200)) # Limit to last 200 entries
+        logging.debug(f"Fetched {len(log_records)} seen log records.")
+        # Format timestamp for display
+        india_tz = pytz.timezone('Asia/Kolkata')
+        for record in log_records:
+            if isinstance(record.get('timestamp'), datetime):
+                 record['timestamp_str'] = record['timestamp'].astimezone(india_tz).strftime('%Y-%m-%d %H:%M:%S %Z')
+            else:
+                 record['timestamp_str'] = "Invalid Date" # Handle potential non-datetime values
+
+        return render_template('seen_log.html', logs=log_records)
+    except Exception as e:
+        logging.error(f"Error fetching seen log records: {e}")
+        return "Error loading seen log data.", 500
+# --- End New Route ---
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True) 
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
