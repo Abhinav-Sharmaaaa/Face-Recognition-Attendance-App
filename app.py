@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, flash
 import os
 from datetime import datetime
+import json
 import pytz
 import cv2
 import numpy as np
@@ -843,6 +844,28 @@ def seen_log_view():
         logging.error(f"Error fetching seen log records: {e}")
         return "Error loading seen log data.", 500
 # --- End New Route ---
+
+
+# --- New Route to Reset Seen Log ---
+@app.route('/reset_seen_log', methods=['POST'])
+def reset_seen_log():
+    if session.get('user_type') != 'admin':
+        logging.warning("Unauthorized attempt to reset seen log.")
+        flash("Unauthorized access.", "error")
+        return redirect(url_for('login')) # Or perhaps seen_log_view with error
+
+    try:
+        seen_log_collection = mongo.db.seen_log
+        result = seen_log_collection.delete_many({})
+        deleted_count = result.deleted_count
+        logging.info(f"Seen log reset requested by admin. {deleted_count} records deleted.")
+        flash(f"Seen log successfully reset. {deleted_count} records removed.", "success")
+    except Exception as e:
+        logging.error(f"Error resetting seen log: {e}")
+        flash("An error occurred while resetting the seen log.", "error")
+
+    return redirect(url_for('seen_log_view'))
+# --- End Reset Seen Log Route ---
 
 
 if __name__ == '__main__':
