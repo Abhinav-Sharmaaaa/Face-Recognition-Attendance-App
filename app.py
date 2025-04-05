@@ -401,19 +401,6 @@ def video_feed():
     # Return the generator function wrapped in a Response object
     return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# Removed the student role concept related to attendance.
-# student_index is now just a placeholder or could be removed if not needed.
-@app.route('/user_dashboard') # Renamed from student_index for clarity
-def user_dashboard():
-    """ Basic dashboard for logged-in non-admin users. """
-    if session.get('user_type') == 'user': # Changed role name for clarity
-        # Could display user info or other non-admin features here
-        user_name = session.get('user_name', 'User') # Assuming name is stored in session on login
-        return render_template('user_dashboard.html', user_name=user_name) # Needs user_dashboard.html template
-    # Redirect others to login
-    flash("Please log in.", "info")
-    return redirect(url_for('login'))
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """ Handles new user registration (Admin only) """
@@ -610,94 +597,30 @@ def users_view(): # Renamed function
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """ Handles user login """
+    """ Handles admin login """
+    # If already logged in as admin, redirect to index immediately
+    if session.get('user_type') == 'admin':
+        return redirect(url_for('index'))
+
     if request.method == 'POST':
-        user_type = request.form.get('user_type') # Should be 'admin' or 'user'
-        password = request.form.get('password') # Generic password field
+        password = request.form.get('admin_password') # Get password from the specific admin field
 
-        if user_type == 'admin':
-            # Simple password check for admin
-            # Use environment variables for real passwords!
-            admin_pass = os.environ.get("ADMIN_PASSWORD", "0000") # Default for testing
-            if password == admin_pass:
-                session['user_type'] = 'admin'
-                session['user_name'] = 'Admin' # Set admin name
-                logging.info("Admin login successful.")
-                flash("Admin login successful.", "success")
-                return redirect(url_for('index')) # Admin dashboard
-            else:
-                logging.warning("Invalid admin password attempt.")
-                flash("Invalid admin credentials.", "error")
-                return render_template('login.html'), 401 # Unauthorized
+        # Simple password check for admin
+        # Use environment variables for real passwords!
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "0000") # Default for testing
+        if password == admin_pass:
+            session['user_type'] = 'admin'
+            session['user_name'] = 'Admin' # Set admin name
+            logging.info("Admin login successful.")
+            flash("Admin login successful.", "success")
+            return redirect(url_for('index')) # Admin dashboard
+        else:
+            logging.warning("Invalid admin password attempt.")
+            flash("Invalid admin credentials.", "error")
+            # Re-render login page on failed attempt
+            return render_template('login.html'), 401 # Unauthorized
 
-        elif user_type == 'user': # Changed from 'student'
-             # --- Face Recognition Login Logic ---
-             photo_data = request.form.get('face_photo') # Expecting base64 data from webcam
-
-             if not photo_data or not photo_data.startswith('data:image/'):
-                 flash("Webcam photo required for user login.", "warning")
-                 return render_template('login.html'), 400
-
-             try:
-                 # Decode image
-                 header, encoded = photo_data.split(',', 1)
-                 image_bytes = io.BytesIO(base64.b64decode(encoded))
-                 nparr = np.frombuffer(image_bytes.getvalue(), np.uint8)
-                 login_image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-                 if login_image is None:
-                      raise ValueError("Failed to decode login image.")
-
-                 # Detect and encode face from login attempt
-                 face_embedding, box = detect_and_encode_face(login_image)
-
-                 if face_embedding is not None:
-                     best_match_name = None
-                     best_similarity = float('inf')
-
-                     for i, stored_embedding in enumerate(known_face_embeddings_list):
-                         try:
-                             similarity = cosine(face_embedding, stored_embedding)
-                             if similarity < best_similarity:
-                                 best_similarity = similarity
-                                 best_match_name = known_face_names[i]
-                         except Exception as e:
-                             logging.error(f"Error comparing login face to known face {known_face_names[i]}: {e}")
-                             continue
-
-                     # Check if match is good enough
-                     if best_match_name and best_similarity < RECOGNITION_THRESHOLD:
-                         session['user_type'] = 'user' # Set session type to 'user'
-                         session['user_name'] = best_match_name # Store username
-                         logging.info(f"User login successful for: {best_match_name} (Dist: {best_similarity:.4f})")
-                         flash(f"Welcome, {best_match_name}!", "success")
-                         return redirect(url_for('user_dashboard')) # Redirect to generic user page
-                     else:
-                         logging.warning(f"Face login failed. Best match: {best_match_name} (Dist: {best_similarity:.4f})")
-                         flash("Face not recognized or match too low.", "error")
-                         return render_template('login.html'), 401
-                 else:
-                     logging.warning("No face detected in login attempt image.")
-                     flash("No face detected in the provided image.", "error")
-                     return render_template('login.html'), 400
-
-             except Exception as e:
-                 logging.error(f"Error during face login processing: {e}")
-                 flash("An error occurred during face login.", "error")
-                 return render_template('login.html'), 500
-             # --- End Face Recognition Login ---
-
-        else: # Invalid user_type submitted
-            flash("Invalid user type specified.", "error")
-            return render_template('login.html'), 400
-
-    # GET request: Show login page
-    # Check if already logged in
-    if 'user_type' in session:
-        if session['user_type'] == 'admin':
-            return redirect(url_for('index'))
-        elif session['user_type'] == 'user':
-            return redirect(url_for('user_dashboard'))
+    # GET request: Show login page (only if not already logged in)
     return render_template('login.html')
 
 
@@ -724,26 +647,12 @@ def restrict_access():
         flash("Please log in to access this page.", "info")
         return redirect(url_for('login'))
 
-    # Admin can access everything (except the basic user dashboard perhaps)
+    # If user is logged in as admin, allow access
     if session.get('user_type') == 'admin':
-         # Optionally prevent admin from accessing user_dashboard directly
-         # if request.endpoint == 'user_dashboard':
-         #    flash("Admins use the main dashboard.", "info")
-         #    return redirect(url_for('index'))
-         return None # Admin allowed
+        return None # Admin allowed
 
-    # Regular 'user' access check
-    if session.get('user_type') == 'user':
-        # Allow access ONLY to the user dashboard
-        if request.endpoint in ['user_dashboard']:
-            return None
-        else:
-            # If a logged-in user tries to access admin pages or other restricted areas
-            flash("You do not have permission to access this page.", "warning")
-            return redirect(url_for('user_dashboard')) # Send them back to their dashboard
-
-    # Fallback if user_type is somehow invalid (shouldn't happen)
-    flash("Invalid session state. Please log in again.", "error")
+    # If not logged in as admin, redirect to login
+    flash("Admin access required. Please log in.", "warning")
     return redirect(url_for('login'))
 
 
