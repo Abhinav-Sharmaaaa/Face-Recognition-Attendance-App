@@ -12,6 +12,7 @@ import base64
 import urllib.parse
 from scipy.spatial.distance import cosine
 from werkzeug.utils import secure_filename
+from bson.objectid import ObjectId # Added for MongoDB ID handling
 
 load_dotenv()
 
@@ -524,7 +525,7 @@ def register():
             logging.info(f"Successfully registered user: {name}")
             flash(f"User '{name}' registered successfully!", "success")
             load_known_faces() # Refresh the in-memory cache
-            return redirect(url_for('users_view')) # Redirect to the list of users
+            return redirect(url_for('view_students')) # Redirect to the student list
 
         except Exception as e:
             logging.error(f"Database error during registration for {name}: {e}")
@@ -536,71 +537,175 @@ def register():
     return render_template('register.html')
 
 
-@app.route('/remove_user/<name>', methods=['POST']) # Renamed route and parameter
-def remove_user(name): # Renamed function
-    """ Removes a registered user (Admin only) """
-    if session.get('user_type') != 'admin':
-         flash("Unauthorized action.", "error")
-         return "Unauthorized", 403
-
-    try:
-        # Decode the name from URL (might contain spaces etc.)
-        decoded_name = urllib.parse.unquote(name)
-        logging.info(f"Attempting to remove user: {decoded_name}")
-
-        # Using 'students' collection name as per original code
-        result = mongo.db.students.delete_one({'name': decoded_name})
-
-        if result.deleted_count > 0:
-            logging.info(f"Successfully removed user: {decoded_name}")
-            flash(f"User '{decoded_name}' removed successfully.", "success")
-            load_known_faces() # Update the cache
-            # Also remove associated sightings from seen_log (Optional but good practice)
-            try:
-                log_result = mongo.db.seen_log.delete_many({'name': decoded_name, 'type': 'known_sighting'})
-                logging.info(f"Removed {log_result.deleted_count} sighting logs for deleted user {decoded_name}.")
-            except Exception as log_e:
-                logging.error(f"Error removing sighting logs for {decoded_name}: {log_e}")
-
-            return redirect(url_for('users_view')) # Redirect to the updated user list
-        else:
-            logging.warning(f"User not found for removal: {decoded_name}")
-            flash(f"User '{decoded_name}' not found!", "error")
-            return redirect(url_for('users_view')), 404 # Not found
-
-    except Exception as e:
-         logging.error(f"Error removing user {name}: {e}")
-         flash("An error occurred while trying to remove the user.", "error")
-         return redirect(url_for('users_view')), 500 # Internal server error
-
-
-@app.route('/users', methods=['GET']) # Renamed route
-def users_view(): # Renamed function
-    """ Displays the list of registered users (Admin only) """
+@app.route('/view_students', methods=['GET'])
+def view_students():
+    """ Displays the list of registered students with search and sort (Admin only) """
     if session.get('user_type') != 'admin':
         flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
+
     try:
-        # Fetch users, projecting only necessary fields
-        # Using 'students' collection name as per original code
-        users_cursor = mongo.db.students.find({}, {"name": 1, "branch": 1, "registered_at": 1})
-        users_list = list(users_cursor)
+        search_query = request.args.get('search', '')
+        sort_by = request.args.get('sort_by', 'name') # Default sort by name
+        sort_order = request.args.get('sort_order', 'asc') # Default sort ascending
 
-        # Format datetime for display
-        for user in users_list:
-             if 'registered_at' in user and isinstance(user['registered_at'], datetime):
-                 # Assuming stored time is UTC or timezone-aware in DB
-                 # Format it nicely
-                 user['registered_at_str'] = user['registered_at'].strftime('%Y-%m-%d %H:%M:%S')
-             else:
-                 user['registered_at_str'] = "N/A" # Handle cases where date might be missing/invalid
+        # --- Build MongoDB Query ---
+        query = {}
+        if search_query:
+            # Case-insensitive search on name or branch
+            regex = {'$regex': search_query, '$options': 'i'}
+            query['$or'] = [{'name': regex}, {'branch': regex}]
 
-        return render_template('users.html', users=users_list) # Needs users.html template
+        # --- Determine Sort Order ---
+        mongo_sort_order = 1 if sort_order == 'asc' else -1
+        valid_sort_fields = ['name', 'branch', 'registered_at']
+        if sort_by not in valid_sort_fields:
+            sort_by = 'name' # Default to name if invalid field provided
+
+        # --- Fetch Data ---
+        students_cursor = mongo.db.students.find(query, {"name": 1, "branch": 1, "registered_at": 1, "_id": 1}) \
+                                          .sort(sort_by, mongo_sort_order)
+        students_list = list(students_cursor)
+
+        # Format datetime and add string representation of ObjectId
+        india_tz = pytz.timezone('Asia/Kolkata')
+        for student in students_list:
+            if 'registered_at' in student and isinstance(student['registered_at'], datetime):
+                student['registered_at_str'] = student['registered_at'].astimezone(india_tz).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                student['registered_at_str'] = "N/A"
+            # Convert ObjectId to string for URL generation in template
+            student['_id_str'] = str(student['_id'])
+
+
+        return render_template('view_students.html',
+                               students=students_list,
+                               search_query=search_query,
+                               sort_by=sort_by,
+                               sort_order=sort_order)
 
     except Exception as e:
-        logging.error(f"Error fetching users list: {e}")
-        flash("Error loading user data.", "error")
-        return render_template('users.html', users=[]), 500 # Show empty list on error
+        logging.error(f"Error fetching students list for view: {e}")
+        flash("Error loading student data.", "error")
+        # Pass empty list and current params back to template on error
+        return render_template('view_students.html',
+                               students=[],
+                               search_query=request.args.get('search', ''),
+                               sort_by=request.args.get('sort_by', 'name'),
+                               sort_order=request.args.get('sort_order', 'asc')), 500
+
+
+@app.route('/edit_student/<student_id>', methods=['GET', 'POST'])
+def edit_student(student_id):
+    """ Handles editing an existing student's details (Admin only) """
+    # No explicit @login_required needed due to restrict_access middleware
+
+    try:
+        # Convert string ID to ObjectId
+        oid = ObjectId(student_id)
+    except Exception:
+        flash("Invalid student ID format.", "error")
+        return redirect(url_for('view_students'))
+
+    # Fetch the student to edit
+    student = mongo.db.students.find_one({'_id': oid})
+    if not student:
+        flash("Student not found.", "error")
+        return redirect(url_for('view_students'))
+
+    if request.method == 'POST':
+        # Process the form submission
+        new_name = request.form.get('name')
+        new_branch = request.form.get('branch')
+
+        if not new_name or not new_branch:
+            flash("Name and Branch cannot be empty.", "error")
+            # Re-render edit form with current data and error
+            return render_template('edit_student.html', student=student, student_id=student_id)
+
+        # Check if the name is being changed to one that already exists (excluding the current student)
+        existing_student_with_new_name = mongo.db.students.find_one({'name': new_name, '_id': {'$ne': oid}})
+        if existing_student_with_new_name:
+            flash(f"Another student with the name '{new_name}' already exists.", "error")
+            return render_template('edit_student.html', student=student, student_id=student_id)
+
+        # Update the student record
+        try:
+            update_result = mongo.db.students.update_one(
+                {'_id': oid},
+                {'$set': {'name': new_name, 'branch': new_branch}}
+            )
+
+            if update_result.modified_count > 0:
+                 # If name changed, update the cache and potentially seen_log
+                if student['name'] != new_name:
+                    logging.info(f"Student name changed from '{student['name']}' to '{new_name}'. Reloading face cache.")
+                    # Update seen_log entries (optional, can be slow if many logs)
+                    # mongo.db.seen_log.update_many({'name': student['name']}, {'$set': {'name': new_name}})
+                    load_known_faces() # Reload cache as name (key) changed
+
+                flash(f"Student '{new_name}' updated successfully.", "success")
+            else:
+                 flash("No changes detected or update failed.", "info") # Or error if update_result indicates failure
+
+            return redirect(url_for('view_students'))
+
+        except Exception as e:
+            logging.error(f"Error updating student {student_id}: {e}")
+            flash("Database error occurred during update.", "error")
+            # Re-render edit form with current data and error
+            return render_template('edit_student.html', student=student, student_id=student_id)
+
+    # GET request: Show the edit form
+    # Pass student_id as well in case needed in the form action URL
+    return render_template('edit_student.html', student=student, student_id=student_id)
+
+
+@app.route('/delete_student/<student_id>', methods=['POST'])
+def delete_student(student_id):
+    """ Handles deleting a student (Admin only) """
+    # No explicit @login_required needed due to restrict_access middleware
+
+    try:
+        oid = ObjectId(student_id)
+    except Exception:
+        flash("Invalid student ID format.", "error")
+        return redirect(url_for('view_students'))
+
+    try:
+        # Find the student first to get their name for logging/cache removal
+        student_to_delete = mongo.db.students.find_one({'_id': oid}, {'name': 1})
+        if not student_to_delete:
+            flash("Student not found for deletion.", "error")
+            return redirect(url_for('view_students')), 404
+
+        student_name = student_to_delete.get('name', 'Unknown') # Get name before deleting
+
+        # Delete the student
+        result = mongo.db.students.delete_one({'_id': oid})
+
+        if result.deleted_count > 0:
+            logging.info(f"Successfully deleted student: {student_name} (ID: {student_id})")
+            flash(f"Student '{student_name}' deleted successfully.", "success")
+            load_known_faces() # Update the cache
+
+            # Optionally remove associated sightings from seen_log
+            try:
+                log_result = mongo.db.seen_log.delete_many({'name': student_name, 'type': 'known_sighting'})
+                logging.info(f"Removed {log_result.deleted_count} sighting logs for deleted student {student_name}.")
+            except Exception as log_e:
+                logging.error(f"Error removing sighting logs for {student_name}: {log_e}")
+
+        else:
+            # This case should ideally not happen if find_one succeeded, but good to handle
+            logging.warning(f"Student with ID {student_id} found but deletion failed.")
+            flash("Student found but could not be deleted.", "error")
+
+    except Exception as e:
+        logging.error(f"Error deleting student {student_id}: {e}")
+        flash("An error occurred while trying to delete the student.", "error")
+
+    return redirect(url_for('view_students'))
 
 
 # Removed upload_photo route as registration handles uploads now.
