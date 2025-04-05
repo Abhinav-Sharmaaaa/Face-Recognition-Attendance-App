@@ -3,31 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register Student</title>
-    <link rel="stylesheet" href="../static/styles.css"> 
+    <title>Register User</title>
+    <link rel="stylesheet" href="../static/styles.css">
 </head>
 <body>
-    <h1>Register a Student</h1>
+    <h1>Register a User</h1>
     <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
+        Role:
+        <select name="role" id="roleSelect" required>
+            <option value="Student">Student</option>
+            <option value="Staff">Staff</option>
+            <option value="Others">Others</option>
+        </select><br>
+
         Name: <input type="text" name="name" required><br>
-        
-        Branch: 
-        <select name="branch" required>
-            <option value="C.S.E.">C.S.E.</option>
-            <option value="I.T.">I.T.</option>
+
+        <div id="branchDiv">
+            Branch:
+            <select name="branch" id="branchSelect">
+                <option value="">Select Branch</option> <!-- Added default option -->
+                <option value="C.S.E.">C.S.E.</option>
+                <option value="I.T.">I.T.</option>
             <option value="Electronics">Electronics</option>
             <option value="Mechanical">Mechanical</option>
             <option value="Automobile">Automobile</option>
             <option value="Civil">Civil</option>
             <option value="Pharmacy">Pharmacy</option>
-        </select><br>
+            </select><br>
+        </div>
 
         <div>
             <label for="photo">Capture Photo:</label>
             <video id="video" width="320" height="240" autoplay></video>
             <button type="button" id="snap">Capture</button>
             <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-            <input type="hidden" name="photo" id="photo" required>
+            <input type="hidden" name="photo" id="photo">
             <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
             <button type="button" id="reCapture" style="display:none;">Re-capture</button>
         </div>
@@ -73,6 +83,31 @@
             capturedPhoto.style.display = 'none'; 
             reCaptureButton.style.display = 'none'; 
         });
+
+        // --- Added JavaScript for conditional branch field ---
+        const roleSelect = document.getElementById('roleSelect');
+        const branchDiv = document.getElementById('branchDiv');
+        const branchSelect = document.getElementById('branchSelect');
+
+        function toggleBranchField() {
+            const selectedRole = roleSelect.value;
+            if (selectedRole === 'Student' || selectedRole === 'Staff') {
+                branchDiv.style.display = 'block';
+                branchSelect.required = true;
+            } else {
+                branchDiv.style.display = 'none';
+                branchSelect.required = false;
+                branchSelect.value = ''; // Clear selection if hidden
+            }
+        }
+
+        // Initial check on page load
+        toggleBranchField();
+
+        // Add event listener
+        roleSelect.addEventListener('change', toggleBranchField);
+        // --- End of added JavaScript ---
+
     </script>
 </body>
 </html>

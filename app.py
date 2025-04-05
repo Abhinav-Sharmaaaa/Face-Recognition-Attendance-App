@@ -84,8 +84,8 @@ except AttributeError:
      exit("OpenCV FaceRecognizerSF unavailable.")
 
 
-# --- Known Face Data Handling (Unchanged) ---
-known_face_data = {} # Cache: name -> {'embedding': np.array, 'branch': str}
+# --- Known Face Data Handling ---
+known_face_data = {} # Cache: name -> {'embedding': np.array, 'branch': str, 'role': str} # Added role
 known_face_embeddings_list = [] # List of embeddings for faster comparison
 known_face_names = [] # List of names corresponding to embeddings list
 
@@ -98,12 +98,12 @@ def load_known_faces():
     temp_embeddings_list = []
     temp_names_list = []
     try:
-        # Fetch only necessary fields
-        # Using 'students' collection as per original code
-        users_cursor = mongo.db.students.find({}, {"name": 1, "branch": 1, "face_embedding": 1})
+        # Fetch necessary fields including role
+        # Using 'students' collection name (consider renaming to 'users' later)
+        users_cursor = mongo.db.students.find({}, {"name": 1, "branch": 1, "role": 1, "face_embedding": 1}) # Added role
         count = 0
         for user_doc in users_cursor:
-            # Check if essential data exists
+            # Check if essential data exists (name and embedding are crucial)
             if 'face_embedding' in user_doc and user_doc['face_embedding'] and 'name' in user_doc:
                 try:
                     # Convert embedding from list (stored in MongoDB) to NumPy array
@@ -112,7 +112,8 @@ def load_known_faces():
                     if embedding_np.shape == (128,):
                         known_face_data[user_doc['name']] = {
                             'embedding': embedding_np,
-                            'branch': user_doc.get('branch', 'N/A') # Handle missing branch
+                            'branch': user_doc.get('branch'), # Get branch (might be None)
+                            'role': user_doc.get('role', 'Unknown') # Get role, default if missing
                         }
                         temp_embeddings_list.append(embedding_np)
                         temp_names_list.append(user_doc['name'])
@@ -422,13 +423,27 @@ def register():
 
     if request.method == 'POST':
         name = request.form.get('name')
+        role = request.form.get('role') # Added role field
+        # Convert role to lowercase for consistent validation and storage
+        role = role.lower() if role else None
         branch = request.form.get('branch') # Or department, group etc.
         photo_data = request.form.get('photo') # From webcam capture
         uploaded_file = request.files.get('uploadPhoto') # From file upload
 
-        if not name or not branch:
-            flash("Name and Branch/Department are required.", "error")
-            return render_template('register.html'), 400 # Re-render form with error
+        # Validate role
+        allowed_roles = ['student', 'staff', 'others']
+        if not role or role not in allowed_roles:
+            flash(f"Invalid or missing role. Must be one of: {', '.join(allowed_roles)}.", "error")
+            return render_template('register.html'), 400
+
+        # Validate required fields based on role
+        if not name:
+             flash("Name is required.", "error")
+             return render_template('register.html'), 400
+        if role in ['student', 'staff'] and not branch:
+            flash("Branch/Department is required for students and staff.", "error")
+            return render_template('register.html'), 400
+        # For 'others', branch is optional/ignored
 
         image = None
         image_source = "unknown"
@@ -515,15 +530,22 @@ def register():
             india_tz = pytz.timezone('Asia/Kolkata')
             # Convert NumPy array embedding to list for MongoDB storage
             embedding_list = face_embedding.tolist()
-            # Using 'students' collection name as per original code
-            mongo.db.students.insert_one({
+            user_data = {
                 'name': name,
-                'branch': branch,
+                'role': role, # Store the role
                 'face_embedding': embedding_list,
                 'registered_at': datetime.now(india_tz)
-            })
-            logging.info(f"Successfully registered user: {name}")
-            flash(f"User '{name}' registered successfully!", "success")
+            }
+            # Include branch only if role is student or staff
+            if role in ['student', 'staff']:
+                user_data['branch'] = branch
+            else:
+                 user_data['branch'] = None # Or omit, depending on preference
+
+            # Using 'students' collection name as per original code (consider renaming later)
+            mongo.db.students.insert_one(user_data)
+            logging.info(f"Successfully registered user: {name} with role: {role}")
+            flash(f"User '{name}' ({role}) registered successfully!", "success")
             load_known_faces() # Refresh the in-memory cache
             return redirect(url_for('view_students')) # Redirect to the student list
 
@@ -558,12 +580,14 @@ def view_students():
 
         # --- Determine Sort Order ---
         mongo_sort_order = 1 if sort_order == 'asc' else -1
-        valid_sort_fields = ['name', 'branch', 'registered_at']
+        # Added 'role' to valid sort fields
+        valid_sort_fields = ['name', 'branch', 'role', 'registered_at']
         if sort_by not in valid_sort_fields:
             sort_by = 'name' # Default to name if invalid field provided
 
         # --- Fetch Data ---
-        students_cursor = mongo.db.students.find(query, {"name": 1, "branch": 1, "registered_at": 1, "_id": 1}) \
+        # Fetch 'role' field as well
+        students_cursor = mongo.db.students.find(query, {"name": 1, "branch": 1, "role": 1, "registered_at": 1, "_id": 1}) \
                                           .sort(sort_by, mongo_sort_order)
         students_list = list(students_cursor)
 
@@ -608,19 +632,30 @@ def edit_student(student_id):
         return redirect(url_for('view_students'))
 
     # Fetch the student to edit
+    # Fetch role as well
     student = mongo.db.students.find_one({'_id': oid})
     if not student:
-        flash("Student not found.", "error")
+        flash("User not found.", "error") # Changed message slightly
         return redirect(url_for('view_students'))
 
     if request.method == 'POST':
         # Process the form submission
         new_name = request.form.get('name')
+        new_role = request.form.get('role') # Added role
         new_branch = request.form.get('branch')
 
-        if not new_name or not new_branch:
-            flash("Name and Branch cannot be empty.", "error")
-            # Re-render edit form with current data and error
+        # Validate role
+        allowed_roles = ['student', 'staff', 'others']
+        if not new_role or new_role not in allowed_roles:
+            flash(f"Invalid or missing role. Must be one of: {', '.join(allowed_roles)}.", "error")
+            return render_template('edit_student.html', student=student, student_id=student_id) # Re-render form
+
+        # Validate required fields based on role
+        if not new_name:
+             flash("Name cannot be empty.", "error")
+             return render_template('edit_student.html', student=student, student_id=student_id)
+        if new_role in ['student', 'staff'] and not new_branch:
+            flash("Branch/Department is required for students and staff.", "error")
             return render_template('edit_student.html', student=student, student_id=student_id)
 
         # Check if the name is being changed to one that already exists (excluding the current student)
@@ -629,24 +664,33 @@ def edit_student(student_id):
             flash(f"Another student with the name '{new_name}' already exists.", "error")
             return render_template('edit_student.html', student=student, student_id=student_id)
 
+        # Prepare update data
+        update_data = {
+            'name': new_name,
+            'role': new_role
+        }
+        if new_role in ['student', 'staff']:
+            update_data['branch'] = new_branch
+        else:
+            # If role changed to 'others', explicitly set branch to None or remove it
+            update_data['branch'] = None # Or use '$unset': {'branch': ""} if you prefer removal
+
         # Update the student record
         try:
             update_result = mongo.db.students.update_one(
                 {'_id': oid},
-                {'$set': {'name': new_name, 'branch': new_branch}}
+                {'$set': update_data}
             )
 
             if update_result.modified_count > 0:
-                 # If name changed, update the cache and potentially seen_log
-                if student['name'] != new_name:
-                    logging.info(f"Student name changed from '{student['name']}' to '{new_name}'. Reloading face cache.")
-                    # Update seen_log entries (optional, can be slow if many logs)
-                    # mongo.db.seen_log.update_many({'name': student['name']}, {'$set': {'name': new_name}})
-                    load_known_faces() # Reload cache as name (key) changed
-
-                flash(f"Student '{new_name}' updated successfully.", "success")
+                flash(f"User '{new_name}' updated successfully.", "success")
+                 # If name changed, update the cache
+                if student.get('name') != new_name:
+                    logging.info(f"User name changed from '{student.get('name', 'N/A')}' to '{new_name}'. Reloading face cache.")
+                    # Consider updating seen_log if necessary
+                    load_known_faces() # Reload cache as name (key) might have changed
             else:
-                 flash("No changes detected or update failed.", "info") # Or error if update_result indicates failure
+                 flash("No changes detected or update failed.", "info")
 
             return redirect(url_for('view_students'))
 
