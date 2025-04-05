@@ -568,15 +568,26 @@ def view_students():
 
     try:
         search_query = request.args.get('search', '')
+        role_filter = request.args.get('role_filter', '') # Get the role filter
         sort_by = request.args.get('sort_by', 'name') # Default sort by name
         sort_order = request.args.get('sort_order', 'asc') # Default sort ascending
 
         # --- Build MongoDB Query ---
-        query = {}
+        query_conditions = []
         if search_query:
             # Case-insensitive search on name or branch
             regex = {'$regex': search_query, '$options': 'i'}
-            query['$or'] = [{'name': regex}, {'branch': regex}]
+            query_conditions.append({'$or': [{'name': regex}, {'branch': regex}]})
+
+        if role_filter:
+            # Add role filter condition
+            query_conditions.append({'role': role_filter})
+
+        # Combine conditions using $and if multiple exist
+        query = {}
+        if query_conditions:
+            query['$and'] = query_conditions
+        # If no conditions, query remains empty {} which fetches all
 
         # --- Determine Sort Order ---
         mongo_sort_order = 1 if sort_order == 'asc' else -1
@@ -605,6 +616,7 @@ def view_students():
         return render_template('view_students.html',
                                students=students_list,
                                search_query=search_query,
+                               role_filter=role_filter, # Pass role_filter to template
                                sort_by=sort_by,
                                sort_order=sort_order)
 
@@ -615,6 +627,7 @@ def view_students():
         return render_template('view_students.html',
                                students=[],
                                search_query=request.args.get('search', ''),
+                               role_filter=request.args.get('role_filter', ''), # Pass role_filter even on error
                                sort_by=request.args.get('sort_by', 'name'),
                                sort_order=request.args.get('sort_order', 'asc')), 500
 

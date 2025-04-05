@@ -6,7 +6,7 @@
     <title>View Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
-        /* Add some specific styles for this page */
+        /* Styles copied from your provided code */
         .search-sort-container {
             margin-bottom: 20px;
             padding: 15px;
@@ -38,6 +38,38 @@
         .search-sort-container button:hover {
             background-color: #0056b3;
         }
+         /* Clear Filters Link Style (if needed) */
+        .search-sort-container a.button-link {
+            padding: 8px 15px;
+            background-color: #6c757d; /* Example secondary color */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: inherit; /* Match button font size */
+            line-height: inherit; /* Match button line height */
+            border: none;
+            margin-left: 10px; /* Keep margin */
+            display: inline-block; /* Align properly with button */
+        }
+        .search-sort-container a.button-link:hover {
+             background-color: #5a6268;
+        }
+
+        .action-buttons-container { /* Container for Register/Dashboard buttons */
+             margin-bottom: 20px; /* Add space below these buttons */
+        }
+        .action-buttons-container .button-link { /* Style for Register/Dashboard */
+             margin-right: 10px;
+             padding: 8px 15px;
+             background-color: #28a745; /* Example Green */
+             color: white;
+             text-decoration: none;
+             border-radius: 4px;
+        }
+         .action-buttons-container .button-link:last-child {
+             background-color: #17a2b8; /* Example Info Blue */
+         }
+
         .student-table {
             width: 100%;
             border-collapse: collapse;
@@ -47,6 +79,7 @@
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
+            vertical-align: middle; /* Align content vertically */
         }
         .student-table th {
             background-color: #f2f2f2;
@@ -60,6 +93,7 @@
         .student-table th .sort-arrow {
             font-size: 0.8em;
             margin-left: 5px;
+            display: inline-block; /* Keep arrow beside text */
         }
         .student-table tr:nth-child(even) {
             background-color: #f9f9f9;
@@ -67,13 +101,25 @@
         .student-table tr:hover {
             background-color: #f1f1f1;
         }
+        /* Ensure actions column buttons fit */
+        .student-table td.actions {
+             white-space: nowrap; /* Prevent wrapping of buttons */
+        }
         .actions a, .actions button {
             margin-right: 5px;
             padding: 5px 10px;
             text-decoration: none;
             border-radius: 3px;
             font-size: 0.9em;
+             display: inline-block; /* Better alignment */
+             vertical-align: middle; /* Align buttons nicely */
         }
+         .actions form { /* Ensure form itself doesn't add extra space */
+             display: inline-block;
+             margin: 0;
+             padding: 0;
+             vertical-align: middle;
+         }
         .actions .edit-btn {
             background-color: #ffc107;
             color: black;
@@ -96,6 +142,13 @@
             padding: 20px;
             color: #666;
         }
+        /* Flash message styles (assuming basic ones exist in styles.css) */
+        .flash-messages { margin-bottom: 15px; }
+        .flash { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
+        .flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .flash.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        /* Add other categories (info, warning) if needed */
+
     </style>
 </head>
 <body>
@@ -113,52 +166,68 @@
         {% endwith %}
 
         <div class="search-sort-container">
-            <form method="GET" action="{{ url_for('view_students') }}" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <form method="GET" action="{{ url_for('view_students') }}" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%;">
                 <div>
                     <label for="search">Search:</label>
                     <input type="text" id="search" name="search" value="{{ search_query or '' }}" placeholder="Name or Branch">
+                </div>
+                <div>
+                    <label for="role_filter">Filter by Role:</label>
+                    <select id="role_filter" name="role_filter">
+                        <option value="" {% if not role_filter %}selected{% endif %}>All</option> {/* Simplified check for 'All' */}
+                        <option value="student" {% if role_filter == 'student' %}selected{% endif %}>Student</option>
+                        <option value="staff" {% if role_filter == 'staff' %}selected{% endif %}>Staff</option>
+                        <option value="others" {% if role_filter == 'others' %}selected{% endif %}>Others</option>
+                    </select>
                 </div>
                 <div>
                     <label for="sort_by">Sort By:</label>
                     <select id="sort_by" name="sort_by">
                         <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
                         <option value="branch" {% if sort_by == 'branch' %}selected{% endif %}>Branch</option>
-                        <option value="registered_at" {% if sort_by == 'registered_at' %}selected{% endif %}>Registered Date</option>
+                        <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
+                        <option value="registered_at" {% if sort_by == 'registered_at' or not sort_by %}selected{% endif %}>Registered Date</option> {/* Default sort */}
                     </select>
                 </div>
                 <div>
                     <label for="sort_order">Order:</label>
                     <select id="sort_order" name="sort_order">
                         <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-                        <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Descending</option>
+                        <option value="desc" {% if sort_order == 'desc' or not sort_order %}selected{% endif %}>Descending</option> {/* Default order */}
                     </select>
                 </div>
                 <button type="submit">Apply</button>
-                <a href="{{ url_for('view_students') }}" class="button-link" style="margin-left: 10px;">Clear Filters</a>
+                <a href="{{ url_for('view_students') }}" class="button-link">Clear Filters</a>
             </form>
         </div>
 
-        <a href="{{ url_for('register') }}" class="button-link">Register New Student</a>
-        <a href="{{ url_for('index') }}" class="button-link">Back to Dashboard</a>
-
+        <div class="action-buttons-container">
+            <a href="{{ url_for('register') }}" class="button-link">Register New Student</a>
+            <a href="{{ url_for('index') }}" class="button-link">Back to Dashboard</a>
+        </div>
 
         {% if students %}
         <table class="student-table">
             <thead>
                 <tr>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
                             Name {% if sort_by == 'name' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
                             Branch {% if sort_by == 'branch' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
                             Registered At {% if sort_by == 'registered_at' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                        </a>
+                    </th>
+                     <th>
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='role', sort_order='desc' if sort_by == 'role' and sort_order == 'asc' else 'asc') }}">
+                            Role {% if sort_by == 'role' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                     <th>Actions</th>
@@ -168,11 +237,14 @@
                 {% for student in students %}
                 <tr>
                     <td>{{ student.name }}</td>
-                    <td>{{ student.branch }}</td>
+                    <td>{{ student.branch if student.branch else 'N/A' }}</td> {# Display N/A if branch is missing #}
                     <td>{{ student.registered_at_str }}</td>
+                    {# FIX: Display 'Not Assigned' if role is missing/empty, otherwise capitalize it #}
+                    <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
                     <td class="actions">
                         <a href="{{ url_for('edit_student', student_id=student._id_str) }}" class="edit-btn">Edit</a>
-                        <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
+                        {# Ensure delete form is inline and confirmed #}
+                        <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
                             <button type="submit" class="delete-btn">Delete</button>
                         </form>
                     </td>
