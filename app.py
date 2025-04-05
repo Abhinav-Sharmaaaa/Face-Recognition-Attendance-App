@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, flash
 import os
-from datetime import datetime
+from datetime import datetime, timedelta # Added timedelta
 import pytz # Kept for seen_log timestamps
 import cv2
 import numpy as np
@@ -248,6 +248,8 @@ def generate_frames():
     last_known_faces = {} # Store last detected faces for smoother display
     india_tz = pytz.timezone('Asia/Kolkata') # Timezone for logging
     seen_log_collection = mongo.db.seen_log # Collection for logging ALL sightings
+    last_log_times = {} # Dictionary to track last log time for each person
+    log_interval = timedelta(minutes=1) # Set the minimum interval between logs
 
     while True:
         success, frame = cap.read()
@@ -324,15 +326,24 @@ def generate_frames():
                         'status_at_log': status_text # Log the status determined above
                     }
                     if recognized_user_name: # Known face detected
-                         log_entry['type'] = 'known_sighting'
-                         log_entry['name'] = recognized_user_name
-                         try:
-                             seen_log_collection.insert_one(log_entry)
-                             logging.info(f"Logged sighting of known face: {recognized_user_name}")
-                         except Exception as db_err:
-                             logging.error(f"Error inserting known sighting log for {recognized_user_name}: {db_err}")
+                        now = current_time_india # Use the already fetched timestamp
+                        last_logged = last_log_times.get(recognized_user_name)
+
+                        # Check if the person was logged before and if the interval has passed
+                        if last_logged is None or (now - last_logged) >= log_interval:
+                            log_entry['type'] = 'known_sighting'
+                            log_entry['name'] = recognized_user_name
+                            try:
+                                seen_log_collection.insert_one(log_entry)
+                                last_log_times[recognized_user_name] = now # Update last log time
+                                logging.info(f"Logged sighting of known face: {recognized_user_name} (Interval passed or first time)")
+                            except Exception as db_err:
+                                logging.error(f"Error inserting known sighting log for {recognized_user_name}: {db_err}")
+                        # else: # Interval not passed, do not log again yet
+                        #    logging.debug(f"Skipping log for {recognized_user_name}, interval not passed.")
 
                     elif status_text == "Unknown Face": # Unknown face detected
+                        # Log unknown faces every time they are detected (no interval needed for unknowns)
                         log_entry['type'] = 'unknown_sighting'
                         # Optionally add cropped face image for unknown faces
                         try:
