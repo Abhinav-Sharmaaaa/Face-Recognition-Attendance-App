@@ -6,6 +6,44 @@
     <title>Seen Log</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <style>
+        .attendance-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .attendance-button:hover {
+            background-color: #0056b3;
+        }
+        #attendance-list {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none; /* Hidden by default */
+        }
+        #attendance-list h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        #attendance-list ul {
+            list-style: none;
+            padding: 0;
+        }
+        #attendance-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #attendance-list li:last-child {
+            border-bottom: none;
+        }
         body {
             font-family: sans-serif;
             margin: 20px;
@@ -92,7 +130,15 @@
     </style>
 </head>
 <body>
+    <button id="getAttendanceBtn" class="attendance-button">Get Attendance</button>
     <h1>Face Sighting Log</h1>
+
+    <div id="attendance-list">
+        <h2>Attendance Report</h2>
+        <ul id="attendance-data">
+            <!-- Attendance data will be loaded here -->
+        </ul>
+    </div>
 
     <table>
         <thead>
@@ -201,5 +247,63 @@
 
     <a href="{{ url_for('index') }}" class="back-link">Back to Admin Dashboard</a>
 
+    <script>
+        document.getElementById('getAttendanceBtn').addEventListener('click', function() {
+            const button = this; // Reference to the button
+            const attendanceListDiv = document.getElementById('attendance-list');
+            const attendanceDataUl = document.getElementById('attendance-data');
+
+            // Show loading state and disable button
+            attendanceDataUl.innerHTML = '<li>Loading attendance data...</li>';
+            attendanceListDiv.style.display = 'block'; // Make the container visible
+            button.disabled = true;
+            button.textContent = 'Loading...'; // Change button text
+
+            fetch("{{ url_for('get_attendance') }}") // Use url_for for the endpoint
+                .then(response => {
+                    if (!response.ok) {
+                        // Try to parse error message from backend if available
+                        return response.json().then(errData => {
+                            throw new Error(errData.error || `HTTP error! status: ${response.status}`);
+                        }).catch(() => {
+                            // Fallback if response is not JSON or doesn't have 'error' field
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    attendanceDataUl.innerHTML = ''; // Clear loading message/previous results
+                    if (data.error) { // Check for application-level errors returned in JSON
+                        attendanceDataUl.innerHTML = `<li class="text-danger">Error: ${data.error}</li>`; // Use a class for styling errors
+                    } else if (!data || data.length === 0) { // Check if data is null or empty array
+                        attendanceDataUl.innerHTML = '<li>No attendance data found for today.</li>';
+                    } else {
+                        data.forEach(student => {
+                            const li = document.createElement('li');
+                            // Format timestamps nicely, handle potential nulls explicitly
+                            const arrivingTime = student.arriving_time
+                                ? new Date(student.arriving_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                : 'N/A';
+                            const leavingTime = student.leaving_time
+                                ? new Date(student.leaving_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                : 'N/A';
+                            li.textContent = `${student.name}: Arriving: ${arrivingTime}, Leaving: ${leavingTime}`;
+                            attendanceDataUl.appendChild(li);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching attendance:', error);
+                    // Display a user-friendly error message
+                    attendanceDataUl.innerHTML = `<li class="text-danger">Error fetching attendance data: ${error.message}. Please check the console for details.</li>`;
+                })
+                .finally(() => {
+                    // Re-enable button and restore text regardless of success or failure
+                    button.disabled = false;
+                    button.textContent = 'Get Attendance';
+                });
+        });
+    </script>
 </body>
 </html>

@@ -1068,7 +1068,137 @@ def reset_seen_log():
         logging.error(f"Error resetting seen log: {e}")
         flash("An error occurred while resetting the seen log.", "error")
 
-    return redirect(url_for('seen_log_view')) # Redirect back to the log view
+@app.route('/get_attendance')
+def get_attendance():
+    """ Endpoint to calculate and return attendance (first/last seen) for known users for the current day. """
+    if session.get('user_type') != 'admin':
+        return jsonify({"error": "Unauthorized"}), 403
+
+    try:
+        india_tz = pytz.timezone('Asia/Kolkata')
+        now_india = datetime.now(india_tz)
+        start_of_day = india_tz.localize(datetime.combine(now_india.date(), time.min))
+        end_of_day = india_tz.localize(datetime.combine(now_india.date(), time.max))
+
+        logging.info(f"Fetching attendance logs between {start_of_day} and {end_of_day}")
+
+        # Query for known sightings within the current day in India timezone
+        log_records_cursor = mongo.db.seen_log.find({
+            'type': 'known_sighting',
+            'timestamp': {
+                '$gte': start_of_day,
+                '$lte': end_of_day
+            }
+        }).sort('timestamp', 1) # Sort ascending to easily find first/last
+
+        attendance_data = defaultdict(lambda: {'arriving': None, 'leaving': None, 'timestamps': []})
+
+        for record in log_records_cursor:
+            name = record.get('name')
+            timestamp = record.get('timestamp')
+            if name and timestamp:
+                # Ensure timestamp is timezone-aware (should be from logging)
+                if timestamp.tzinfo is None:
+                     timestamp = india_tz.localize(timestamp) # Add timezone if missing (fallback)
+                else:
+                     timestamp = timestamp.astimezone(india_tz) # Convert to India TZ just in case
+
+                attendance_data[name]['timestamps'].append(timestamp)
+
+        # Process the collected timestamps for each person
+        final_attendance = {}
+        for name, data in attendance_data.items():
+            if data['timestamps']:
+                timestamps = sorted(data['timestamps']) # Ensure sorted
+                arriving_time = timestamps[0]
+                leaving_time = timestamps[-1]
+                final_attendance[name] = {
+                    'name': name, # Include name for easier frontend processing
+                    'arriving_time': arriving_time.strftime('%Y-%m-%d %H:%M:%S'),
+                    # Corrected: Always format the leaving_time, even if it's the same as arriving_time
+                    'leaving_time': leaving_time.strftime('%Y-%m-%d %H:%M:%S')
+                }
+
+        logging.info(f"Processed attendance for {len(final_attendance)} individuals.")
+        # Convert final_attendance dict to a list of objects for easier iteration in JS
+        return jsonify(list(final_attendance.values()))
+
+    except Exception as e:
+        logging.error(f"Error calculating attendance: {e}")
+        return jsonify({"error": "Failed to calculate attendance"}), 500
+
+@app.route('/attendance')
+def attendance_page():
+    """ Renders the dedicated attendance page. """
+    if session.get('user_type') != 'admin':
+        flash("Unauthorized access.", "warning")
+        return redirect(url_for('login'))
+
+    try:
+        india_tz = pytz.timezone('Asia/Kolkata')
+        now_india = datetime.now(india_tz)
+        start_of_day = india_tz.localize(datetime.combine(now_india.date(), time.min))
+        end_of_day = india_tz.localize(datetime.combine(now_india.date(), time.max))
+
+        logging.info(f"Fetching attendance logs for attendance page between {start_of_day} and {end_of_day}")
+
+        # Query for known sightings within the current day in India timezone
+        log_records_cursor = mongo.db.seen_log.find({
+            'type': 'known_sighting',
+            'timestamp': {
+                '$gte': start_of_day,
+                '$lte': end_of_day
+            }
+        }).sort('timestamp', 1) # Sort ascending to easily find first/last
+
+        attendance_data = defaultdict(lambda: {'timestamps': []})
+        user_details = {} # Store branch/role info
+
+        # Pre-fetch user details to avoid multiple DB calls inside the loop
+        known_users = list(mongo.db.students.find({}, {"name": 1, "branch": 1, "role": 1}))
+        for user in known_users:
+            user_details[user['name']] = {'branch': user.get('branch', 'N/A'), 'role': user.get('role', 'N/A')}
+
+
+        for record in log_records_cursor:
+            name = record.get('name')
+            timestamp = record.get('timestamp')
+            if name and timestamp:
+                # Ensure timestamp is timezone-aware
+                if timestamp.tzinfo is None:
+                     timestamp = india_tz.localize(timestamp)
+                else:
+                     timestamp = timestamp.astimezone(india_tz)
+
+                attendance_data[name]['timestamps'].append(timestamp)
+
+        # Process the collected timestamps for each person
+        final_attendance = []
+        for name, data in attendance_data.items():
+            if data['timestamps']:
+                timestamps = sorted(data['timestamps']) # Ensure sorted
+                arriving_time = timestamps[0]
+                leaving_time = timestamps[-1] if len(timestamps) > 1 else arriving_time # Handle single sighting case
+                details = user_details.get(name, {'branch': 'N/A', 'role': 'N/A'}) # Get details or default
+                final_attendance.append({
+                    'name': name,
+                    'branch': details['branch'],
+                    'role': details['role'],
+                    'arriving_time': arriving_time.strftime('%H:%M:%S'), # Format as HH:MM:SS
+                    'leaving_time': leaving_time.strftime('%H:%M:%S'), # Format as HH:MM:SS
+                    'date': arriving_time.strftime('%Y-%m-%d') # Add date
+                })
+
+        logging.info(f"Processed attendance for {len(final_attendance)} individuals for attendance page.")
+        # Sort by name for consistent display
+        final_attendance.sort(key=lambda x: x['name'])
+
+        return render_template('attendance.html', attendance_records=final_attendance)
+
+    except Exception as e:
+        logging.error(f"Error generating attendance page: {e}")
+        flash("Error loading attendance data.", "error")
+        return render_template('attendance.html', attendance_records=[]), 500
 
 
 if __name__ == '__main__':
