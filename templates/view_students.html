@@ -83,12 +83,13 @@
         }
         .student-table th {
             background-color: #f2f2f2;
-            cursor: pointer; /* Indicate sortable columns */
+            /* cursor: pointer; */ /* Removed cursor pointer from non-sorting headers */
         }
-        .student-table th a {
+        .student-table th a { /* Style only applies to sorting links now */
             text-decoration: none;
             color: inherit; /* Inherit color from th */
             display: block; /* Make the whole header clickable */
+            cursor: pointer; /* Add pointer cursor specifically to links */
         }
         .student-table th .sort-arrow {
             font-size: 0.8em;
@@ -153,7 +154,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Registered Students</h1>
+        <h1>View Students</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -174,29 +175,26 @@
                 <div>
                     <label for="role_filter">Filter by Role:</label>
                     <select id="role_filter" name="role_filter">
-                        <option value="" {% if not role_filter %}selected{% endif %}>All</option> {/* Simplified check for 'All' */}
+                        <option value="" {% if not role_filter %}selected{% endif %}>All Roles</option>
                         <option value="student" {% if role_filter == 'student' %}selected{% endif %}>Student</option>
                         <option value="staff" {% if role_filter == 'staff' %}selected{% endif %}>Staff</option>
                         <option value="others" {% if role_filter == 'others' %}selected{% endif %}>Others</option>
                     </select>
                 </div>
                 <div>
-                    <label for="sort_by">Sort By:</label>
-                    <select id="sort_by" name="sort_by">
-                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>Name</option>
-                        <option value="branch" {% if sort_by == 'branch' %}selected{% endif %}>Branch</option>
-                        <option value="role" {% if sort_by == 'role' %}selected{% endif %}>Role</option>
-                        <option value="registered_at" {% if sort_by == 'registered_at' or not sort_by %}selected{% endif %}>Registered Date</option> {/* Default sort */}
+                    <label for="branch_filter">Filter by Branch:</label>
+                    <select id="branch_filter" name="branch_filter" onchange="this.form.submit()">
+                        <option value="" {% if not branch_filter %}selected{% endif %}>All Branches</option>
+                        {% for branch in distinct_branches %}
+                            {# Check if branch is not None or empty before displaying #}
+                            {% if branch %} 
+                                <option value="{{ branch }}" {% if branch_filter == branch %}selected{% endif %}>{{ branch }}</option>
+                            {% endif %}
+                        {% endfor %}
                     </select>
                 </div>
-                <div>
-                    <label for="sort_order">Order:</label>
-                    <select id="sort_order" name="sort_order">
-                        <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Ascending</option>
-                        <option value="desc" {% if sort_order == 'desc' or not sort_order %}selected{% endif %}>Descending</option> {/* Default order */}
-                    </select>
-                </div>
-                <button type="submit">Apply</button>
+
+                <button type="submit">Apply Filters</button> {# Renamed button slightly #}
                 <a href="{{ url_for('view_students') }}" class="button-link">Clear Filters</a>
             </form>
         </div>
@@ -211,22 +209,22 @@
             <thead>
                 <tr>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
                             Name {% if sort_by == 'name' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
                             Branch {% if sort_by == 'branch' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
-                            Registered At {% if sort_by == 'registered_at' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
+                            Registered At {% if sort_by == 'registered_at' or not sort_by %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %} {# Default sort indication #}
                         </a>
                     </th>
                      <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, sort_by='role', sort_order='desc' if sort_by == 'role' and sort_order == 'asc' else 'asc') }}">
+                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='role', sort_order='desc' if sort_by == 'role' and sort_order == 'asc' else 'asc') }}">
                             Role {% if sort_by == 'role' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
@@ -242,7 +240,6 @@
                     {# FIX: Display 'Not Assigned' if role is missing/empty, otherwise capitalize it #}
                     <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
                     <td class="actions">
-                        <a href="{{ url_for('edit_student', student_id=student._id_str) }}" class="edit-btn">Edit</a>
                         {# Ensure delete form is inline and confirmed #}
                         <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
                             <button type="submit" class="delete-btn">Delete</button>

@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, flash
 import os
-from datetime import datetime, timedelta # Added timedelta
+from datetime import datetime, timedelta, time # Added time
 import pytz # Kept for seen_log timestamps
 import cv2
 import numpy as np
@@ -13,6 +13,7 @@ import urllib.parse
 from scipy.spatial.distance import cosine
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId # Added for MongoDB ID handling
+import json # Added for configuration
 
 load_dotenv()
 
@@ -68,6 +69,33 @@ except AttributeError:
 
 
 face_recognizer = None
+# --- Configuration Handling ---
+CONFIG_FILE = 'config.json'
+
+def load_config():
+    """Loads configuration from JSON file."""
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            logging.error(f"Error decoding JSON from {CONFIG_FILE}. Using defaults.")
+            return {} # Return empty dict if file is corrupt
+        except Exception as e:
+            logging.error(f"Error reading config file {CONFIG_FILE}: {e}")
+            return {}
+    return {} # Return empty dict if file doesn't exist
+
+def save_config(config_data):
+    """Saves configuration to JSON file."""
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(config_data, f, indent=4)
+        logging.info(f"Configuration saved to {CONFIG_FILE}")
+    except Exception as e:
+        logging.error(f"Error writing config file {CONFIG_FILE}: {e}")
+        flash("Error saving configuration.", "error") # Flash error to user
+
 try:
     face_recognizer = cv2.FaceRecognizerSF.create(
         model=sface_model_path,
@@ -239,7 +267,25 @@ def live_feed():
 
 
 def generate_frames():
-    """ Generates frames from webcam, performs face recognition, and logs sightings. """
+    """ Generates frames from webcam, performs face recognition, logs sightings, and stops at configured time if enabled. """
+    config = load_config() # Load configuration
+    stop_time_enabled = config.get('stop_time_enabled', False) # Default to disabled if not set
+    stop_time_str = config.get('stop_time')
+    stop_time_obj = None
+
+    if stop_time_enabled and stop_time_str: # Only process stop time if enabled and set
+        try:
+            stop_time_obj = datetime.strptime(stop_time_str, '%H:%M').time()
+            logging.info(f"Live feed monitoring enabled to stop at {stop_time_str}")
+        except ValueError:
+            logging.warning(f"Invalid stop_time format '{stop_time_str}' in config. Ignoring stop time despite being enabled.")
+            stop_time_obj = None # Ensure it's None if format is bad
+    elif stop_time_enabled:
+        logging.warning("Stop time is enabled in config, but no valid time is set.")
+    else:
+        logging.info("Automatic live feed stop time is disabled.")
+
+
     cap = cv2.VideoCapture(0) # Use camera 0
     if not cap.isOpened():
         logging.error("Cannot open camera 0")
@@ -258,6 +304,15 @@ def generate_frames():
         if not success:
             logging.warning("Failed to read frame from camera.")
             break
+
+        # --- Stop Time Check (only if enabled and time object is valid) ---
+        if stop_time_enabled and stop_time_obj:
+            india_tz = pytz.timezone('Asia/Kolkata') # Ensure timezone is defined before use
+            current_time_india = datetime.now(india_tz).time()
+            if current_time_india >= stop_time_obj:
+                logging.info(f"Current time {current_time_india} reached or passed enabled stop time {stop_time_obj}. Stopping live feed.")
+                break # Exit the loop
+        # --- End Stop Time Check ---
 
         # Create a copy for processing, display the flipped original
         processing_frame = frame.copy()
@@ -561,16 +616,30 @@ def register():
 
 @app.route('/view_students', methods=['GET'])
 def view_students():
-    """ Displays the list of registered students with search and sort (Admin only) """
+    """ Displays the list of registered students with search, role filter, branch filter, and sort (Admin only) """
     if session.get('user_type') != 'admin':
         flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
 
+    # --- Removed Temporary Simplification ---
+
     try:
         search_query = request.args.get('search', '')
         role_filter = request.args.get('role_filter', '') # Get the role filter
+        branch_filter = request.args.get('branch_filter', '') # Get the branch filter from dropdown
         sort_by = request.args.get('sort_by', 'name') # Default sort by name
         sort_order = request.args.get('sort_order', 'asc') # Default sort ascending
+
+        # --- Fetch Distinct Branches for Dropdown ---
+        try:
+            # Get unique non-null/non-empty branch values from users with roles 'student' or 'staff'
+            distinct_branches = mongo.db.students.distinct('branch', {'branch': {'$nin': [None, '']}, 'role': {'$in': ['student', 'staff']}})
+            # Sort branches alphabetically for the dropdown
+            distinct_branches.sort()
+        except Exception as db_err:
+            logging.error(f"Error fetching distinct branches: {db_err}")
+            flash("Error loading branch filter options.", "error")
+            distinct_branches = [] # Provide empty list on error
 
         # --- Build MongoDB Query ---
         query_conditions = []
@@ -583,6 +652,10 @@ def view_students():
             # Add role filter condition
             query_conditions.append({'role': role_filter})
 
+        if branch_filter:
+            # Add branch filter condition
+            query_conditions.append({'branch': branch_filter})
+
         # Combine conditions using $and if multiple exist
         query = {}
         if query_conditions:
@@ -591,8 +664,8 @@ def view_students():
 
         # --- Determine Sort Order ---
         mongo_sort_order = 1 if sort_order == 'asc' else -1
-        # Added 'role' to valid sort fields
-        valid_sort_fields = ['name', 'branch', 'role', 'registered_at']
+        # Valid sort fields
+        valid_sort_fields = ['name', 'role', 'registered_at', 'branch'] # Added 'branch'
         if sort_by not in valid_sort_fields:
             sort_by = 'name' # Default to name if invalid field provided
 
@@ -612,110 +685,37 @@ def view_students():
             # Convert ObjectId to string for URL generation in template
             student['_id_str'] = str(student['_id'])
 
+        # --- DEBUG: Log distinct branches ---
+        logging.info(f"Distinct branches being passed to template: {distinct_branches}")
+        # --- END DEBUG ---
 
         return render_template('view_students.html',
                                students=students_list,
                                search_query=search_query,
-                               role_filter=role_filter, # Pass role_filter to template
+                               role_filter=role_filter,
+                               branch_filter=branch_filter, # Pass branch_filter to template
+                               distinct_branches=distinct_branches, # Pass branches for dropdown
                                sort_by=sort_by,
                                sort_order=sort_order)
 
     except Exception as e:
         logging.error(f"Error fetching students list for view: {e}")
+        # Attempt to fetch branches even on general error for consistent UI
+        try:
+            distinct_branches = mongo.db.students.distinct('branch', {'branch': {'$nin': [None, '']}, 'role': {'$in': ['student', 'staff']}})
+            distinct_branches.sort()
+        except:
+            distinct_branches = [] # Fallback if branch fetch also fails
         flash("Error loading student data.", "error")
         # Pass empty list and current params back to template on error
         return render_template('view_students.html',
                                students=[],
                                search_query=request.args.get('search', ''),
-                               role_filter=request.args.get('role_filter', ''), # Pass role_filter even on error
+                               role_filter=request.args.get('role_filter', ''),
+                               branch_filter=request.args.get('branch_filter', ''), # Pass branch_filter even on error
+                               distinct_branches=distinct_branches, # Pass branches even on error
                                sort_by=request.args.get('sort_by', 'name'),
-                               sort_order=request.args.get('sort_order', 'asc')), 500
-
-
-@app.route('/edit_student/<student_id>', methods=['GET', 'POST'])
-def edit_student(student_id):
-    """ Handles editing an existing student's details (Admin only) """
-    # No explicit @login_required needed due to restrict_access middleware
-
-    try:
-        # Convert string ID to ObjectId
-        oid = ObjectId(student_id)
-    except Exception:
-        flash("Invalid student ID format.", "error")
-        return redirect(url_for('view_students'))
-
-    # Fetch the student to edit
-    # Fetch role as well
-    student = mongo.db.students.find_one({'_id': oid})
-    if not student:
-        flash("User not found.", "error") # Changed message slightly
-        return redirect(url_for('view_students'))
-
-    if request.method == 'POST':
-        # Process the form submission
-        new_name = request.form.get('name')
-        new_role = request.form.get('role') # Added role
-        new_branch = request.form.get('branch')
-
-        # Validate role
-        allowed_roles = ['student', 'staff', 'others']
-        if not new_role or new_role not in allowed_roles:
-            flash(f"Invalid or missing role. Must be one of: {', '.join(allowed_roles)}.", "error")
-            return render_template('edit_student.html', student=student, student_id=student_id) # Re-render form
-
-        # Validate required fields based on role
-        if not new_name:
-             flash("Name cannot be empty.", "error")
-             return render_template('edit_student.html', student=student, student_id=student_id)
-        if new_role in ['student', 'staff'] and not new_branch:
-            flash("Branch/Department is required for students and staff.", "error")
-            return render_template('edit_student.html', student=student, student_id=student_id)
-
-        # Check if the name is being changed to one that already exists (excluding the current student)
-        existing_student_with_new_name = mongo.db.students.find_one({'name': new_name, '_id': {'$ne': oid}})
-        if existing_student_with_new_name:
-            flash(f"Another student with the name '{new_name}' already exists.", "error")
-            return render_template('edit_student.html', student=student, student_id=student_id)
-
-        # Prepare update data
-        update_data = {
-            'name': new_name,
-            'role': new_role
-        }
-        if new_role in ['student', 'staff']:
-            update_data['branch'] = new_branch
-        else:
-            # If role changed to 'others', explicitly set branch to None or remove it
-            update_data['branch'] = None # Or use '$unset': {'branch': ""} if you prefer removal
-
-        # Update the student record
-        try:
-            update_result = mongo.db.students.update_one(
-                {'_id': oid},
-                {'$set': update_data}
-            )
-
-            if update_result.modified_count > 0:
-                flash(f"User '{new_name}' updated successfully.", "success")
-                 # If name changed, update the cache
-                if student.get('name') != new_name:
-                    logging.info(f"User name changed from '{student.get('name', 'N/A')}' to '{new_name}'. Reloading face cache.")
-                    # Consider updating seen_log if necessary
-                    load_known_faces() # Reload cache as name (key) might have changed
-            else:
-                 flash("No changes detected or update failed.", "info")
-
-            return redirect(url_for('view_students'))
-
-        except Exception as e:
-            logging.error(f"Error updating student {student_id}: {e}")
-            flash("Database error occurred during update.", "error")
-            # Re-render edit form with current data and error
-            return render_template('edit_student.html', student=student, student_id=student_id)
-
-    # GET request: Show the edit form
-    # Pass student_id as well in case needed in the form action URL
-    return render_template('edit_student.html', student=student, student_id=student_id)
+                                sort_order=request.args.get('sort_order', 'asc')), 500
 
 
 @app.route('/delete_student/<student_id>', methods=['POST'])
@@ -763,6 +763,69 @@ def delete_student(student_id):
         flash("An error occurred while trying to delete the student.", "error")
 
     return redirect(url_for('view_students'))
+
+
+@app.route('/configure', methods=['GET', 'POST'])
+def configure():
+    """ Handles configuration settings (Admin only) """
+    if session.get('user_type') != 'admin':
+        flash("Unauthorized access.", "warning")
+        return redirect(url_for('login'))
+
+    config = load_config()
+
+    if request.method == 'POST':
+        # Checkbox value: 'on' if checked, None if unchecked
+        enable_stop_time = request.form.get('enable_stop_time') == 'on'
+        stop_time_str = request.form.get('stop_time')
+
+        config['stop_time_enabled'] = enable_stop_time
+
+        if enable_stop_time:
+            # Validate time only if the feature is enabled
+            if stop_time_str and len(stop_time_str) == 5 and stop_time_str[2] == ':':
+                try:
+                    # Further validation by trying to parse
+                    datetime.strptime(stop_time_str, '%H:%M')
+                    config['stop_time'] = stop_time_str
+                    flash_message = f"Live feed stop time enabled and set to {stop_time_str}."
+                    flash_category = "success"
+                except ValueError:
+                    # Keep enabled flag, but don't save invalid time, maybe keep old time?
+                    # For simplicity, let's just report error and not save the invalid time.
+                    # config['stop_time'] = config.get('stop_time', '') # Keep old time if invalid new one
+                    flash_message = "Stop time enabled, but the provided time format was invalid. Please use HH:MM (24-hour). Previous time (if any) kept."
+                    flash_category = "warning"
+                except Exception as e:
+                     logging.error(f"Error processing/saving stop time: {e}")
+                     flash_message = "An error occurred while saving the time."
+                     flash_category = "error"
+            else:
+                # Enabled, but time string is missing or malformed
+                # config['stop_time'] = config.get('stop_time', '') # Keep old time
+                flash_message = "Stop time enabled, but no valid time was provided. Please enter a time in HH:MM format."
+                flash_category = "warning"
+        else:
+            # Feature disabled, no need to validate time. Optionally clear it.
+            # config['stop_time'] = '' # Optionally clear time when disabled
+            flash_message = "Automatic live feed stop time disabled."
+            flash_category = "success"
+
+        try:
+            save_config(config)
+            flash(flash_message, flash_category)
+        except Exception as e:
+            logging.error(f"Error saving configuration: {e}")
+            flash("Failed to save configuration settings.", "error")
+
+
+        # Redirect back to configure page after POST to show updated value/flash message
+        return redirect(url_for('configure'))
+
+    # GET request
+    current_stop_time = config.get('stop_time', '') # Get current time or empty string
+    stop_time_enabled = config.get('stop_time_enabled', False) # Get current enabled state, default false
+    return render_template('configure.html', current_stop_time=current_stop_time, stop_time_enabled=stop_time_enabled)
 
 
 # Removed upload_photo route as registration handles uploads now.
