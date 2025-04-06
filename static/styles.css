@@ -1,14 +1,30 @@
 
+*, *::before, *::after {
+    box-sizing: border-box; /* Apply border-box globally */
+}
+
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to bottom, #f0f8ff, #91c1f4); 
+    background: linear-gradient(to bottom, #f0f8ff, #91c1f4);
     color: #004080; 
     margin: 0;
-    padding: 0;
+    padding: 20px; /* Added padding */
+    display: flex; /* Using flex for centering might be better on specific containers */
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh; /* Ensure body takes full height */
 }
 
 .container {
     text-align: center;
+    width: 90%; /* Give container a width */
+    max-width: 1200px; /* Set a max-width */
+    margin: 20px auto; /* Center container and add margin */
+    padding: 20px; /* Add padding inside container */
+    background-color: rgba(255, 255, 255, 0.8); /* Optional: slight background for contrast */
+    border-radius: 10px; /* Optional: rounded corners */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Optional: subtle shadow */
+    overflow: hidden; /* Add overflow hidden to prevent content spillover */
 }
 
 
@@ -82,23 +98,12 @@ body {
     }
 }
 
-body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f8ff; 
-    color: #333;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
-}
+/* Removed redundant body styles - properties merged into the first body definition */
 
 h1 {
-    color: #0056b3;
+    color: #0056b3; /* Keeping this h1 style, ensure it doesn't conflict with .welcome-text */
     font-size: 30px;
-    font-weight: bold;
+    font-weight: 600; /* Merged font-weight from later definition */
     margin-bottom: 20px;
 }
 
@@ -108,8 +113,11 @@ form {
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-    width: 420px;
+    max-width: 420px; /* Set max-width */
+    width: 100%; /* Allow shrinking */
     text-align: center;
+    margin-left: auto; /* Center form if container is wider */
+    margin-right: auto; /* Center form if container is wider */
 }
 
 
@@ -153,6 +161,7 @@ button {
     color: white;
     padding: 12px 18px;
     font-size: 16px;
+    font-weight: 500; /* Merged font-weight from later definition */
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -187,22 +196,17 @@ a:hover {
     text-decoration: underline;
 }
 
-body {
-    font-family: 'Poppins', sans-serif;
-}
+/* Removed misplaced comment */
 
 .login-container {
-    width: 350px;
+    max-width: 350px; /* Use max-width instead of fixed width */
+    width: 90%; /* Allow shrinking */
+    margin-left: auto; /* Center the container */
+    margin-right: auto; /* Center the container */
     text-align: center;
 }
 
-h1 {
-    font-weight: 600;
-}
-
-button {
-    font-weight: 500;
-}
+/* Removed redundant h1 and button definitions */
 
 #admin-password {
     transition: all 0.3s ease-in-out;

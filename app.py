@@ -716,18 +716,22 @@ def view_students():
                                branch_filter=branch_filter, # Pass branch_filter to template
                                distinct_branches=distinct_branches, # Pass branches for dropdown
                                sort_by=sort_by,
-                               sort_order=sort_order)
+                                sort_order=sort_order)
 
     except Exception as e:
-        logging.error(f"Error fetching students list for view: {e}")
+        # Log the full traceback for detailed debugging
+        logging.exception(f"Error fetching students list for view:") # Use logging.exception to include traceback
         # Attempt to fetch branches even on general error for consistent UI
         try:
             distinct_branches = mongo.db.students.distinct('branch', {'branch': {'$nin': [None, '']}, 'role': {'$in': ['student', 'staff']}})
             distinct_branches.sort()
-        except:
-            distinct_branches = [] # Fallback if branch fetch also fails
-        flash("Error loading student data.", "error")
-        # Pass empty list and current params back to template on error
+        except Exception as db_err:
+             logging.error(f"Error fetching distinct branches during exception handling: {db_err}")
+             distinct_branches = [] # Fallback if branch fetch also fails
+
+        flash("Error loading student data. Please check logs or contact support.", "error") # More informative flash
+        # Pass empty list and current params back to template on error, but return 200 OK
+        # Returning 200 might prevent session issues triggered by 500 errors.
         return render_template('view_students.html',
                                students=[],
                                search_query=request.args.get('search', ''),
@@ -735,7 +739,7 @@ def view_students():
                                branch_filter=request.args.get('branch_filter', ''), # Pass branch_filter even on error
                                distinct_branches=distinct_branches, # Pass branches even on error
                                sort_by=request.args.get('sort_by', 'name'),
-                                sort_order=request.args.get('sort_order', 'asc')), 500
+                               sort_order=request.args.get('sort_order', 'asc')), 200 # Return 200 OK
 
 
 @app.route('/delete_student/<student_id>', methods=['POST'])
