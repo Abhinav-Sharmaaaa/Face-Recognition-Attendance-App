@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import os
 from datetime import datetime, timedelta, time # Added time
 import pytz # Kept for seen_log timestamps
+from collections import defaultdict # Import defaultdict for easier grouping
 import cv2
 import numpy as np
 import io
@@ -895,35 +896,59 @@ def restrict_access():
 # --- Seen Log Routes (Kept) ---
 @app.route('/seen_log')
 def seen_log_view():
-    """ Displays the log of all face sightings (Admin only) """
+    """ Displays the log of all face sightings, grouped by person (Admin only) """
     if session.get('user_type') != 'admin':
         flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
     try:
-        # Fetch logs, sort by timestamp descending, limit for performance
-        log_records = list(mongo.db.seen_log.find().sort('timestamp', -1).limit(500)) # Limit to last 500 entries
+        # Fetch logs, sort by timestamp descending
+        log_records_cursor = mongo.db.seen_log.find().sort('timestamp', -1) # Fetch cursor first
+        log_records = list(log_records_cursor) # Convert to list
         logging.debug(f"Fetched {len(log_records)} seen log records.")
 
-        # Format timestamp for display
+        # Group logs by person
+        grouped_logs = defaultdict(list)
+        unknown_logs = [] # Separate list for unknown sightings
+
         india_tz = pytz.timezone('Asia/Kolkata')
         for record in log_records:
-             # Safely get timestamp and format it
-             ts = record.get('timestamp')
-             if isinstance(ts, datetime):
-                  # Convert to local timezone if needed (assuming stored as UTC or naive)
-                  record['timestamp_str'] = ts.astimezone(india_tz).strftime('%Y-%m-%d %H:%M:%S %Z')
-             else:
-                  record['timestamp_str'] = "Invalid Date" # Handle bad data
+            # Safely get timestamp and format it
+            ts = record.get('timestamp')
+            if isinstance(ts, datetime):
+                record['timestamp_str'] = ts.astimezone(india_tz).strftime('%Y-%m-%d %H:%M:%S %Z')
+            else:
+                record['timestamp_str'] = "Invalid Date"
 
-             # Make user 'Unknown' if name is missing (for known_sightings with data issue)
-             if record.get('type') == 'known_sighting' and not record.get('name'):
-                 record['name'] = 'Unknown (Error)'
+            # Group by name if known, otherwise add to unknown list
+            if record.get('type') == 'known_sighting':
+                name = record.get('name')
+                if name:
+                    grouped_logs[name].append(record)
+                else:
+                    # Handle known sightings with missing names (data error)
+                    record['name'] = 'Unknown (Error)'
+                    unknown_logs.append(record) # Add to unknowns for now
+            elif record.get('type') == 'unknown_sighting':
+                 # Add unknown sightings to their own list
+                 unknown_logs.append(record)
+            # Add handling for other potential log types if necessary
 
-        return render_template('seen_log.html', logs=log_records) # Needs seen_log.html template
+        # Convert defaultdict to regular dict for template compatibility if needed
+        grouped_logs_dict = dict(grouped_logs)
+
+        # Sort logs within each person's group by timestamp descending (already sorted by fetch)
+        # If sorting needed within groups:
+        # for name in grouped_logs_dict:
+        #     grouped_logs_dict[name].sort(key=lambda x: x.get('timestamp', datetime.min), reverse=True)
+        # unknown_logs.sort(key=lambda x: x.get('timestamp', datetime.min), reverse=True)
+
+
+        return render_template('seen_log.html', grouped_logs=grouped_logs_dict, unknown_logs=unknown_logs)
     except Exception as e:
-        logging.error(f"Error fetching seen log records: {e}")
+        logging.error(f"Error fetching or grouping seen log records: {e}")
         flash("Error loading seen log data.", "error")
-        return render_template('seen_log.html', logs=[]), 500 # Show empty on error
+        # Pass empty structures on error
+        return render_template('seen_log.html', grouped_logs={}, unknown_logs=[]), 500
 
 
 @app.route('/reset_seen_log', methods=['POST'])
