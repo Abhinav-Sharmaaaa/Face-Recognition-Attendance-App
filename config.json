@@ -1,4 +1,5 @@
 {
     "stop_time": "14:56",
-    "stop_time_enabled": false
+    "stop_time_enabled": false,
+    "unknown_face_timeout": 2
 }

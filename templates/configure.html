@@ -82,12 +82,30 @@
                 <input type="checkbox" class="form-check-input" id="enable_stop_time" name="enable_stop_time" {% if stop_time_enabled %}checked{% endif %}>
                 <label class="form-check-label" for="enable_stop_time">Enable Automatic Live Feed Stop Time</label>
             </div>
-            <div class="mb-3">
-                <label for="stop_time" class="form-label">Stop Time (HH:MM)</label>
-                <input type="time" class="form-control" id="stop_time" name="stop_time" value="{{ current_stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
-                <div class="form-text">Set the time (24-hour format) when the live feed monitoring should automatically stop each day.</div>
+            <!-- Stop Time Input -->
+            <div class="mb-3 row">
+                <label for="stop_time" class="col-sm-4 col-form-label">Stop Time:</label>
+                <div class="col-sm-8">
+                    <input type="time" class="form-control" id="stop_time" name="stop_time" value="{{ stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
+                    <div class="form-text">Set the time when the live feed should automatically stop.</div>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100">Save Settings</button>
+
+            <hr> <!-- Separator -->
+
+            <!-- Unknown Face Timeout Setting -->
+            <div class="mb-3 row">
+                <label for="unknown_face_timeout" class="col-sm-4 col-form-label">Unknown Face Timeout (seconds):</label>
+                <div class="col-sm-8">
+                    <input type="number" class="form-control" id="unknown_face_timeout" name="unknown_face_timeout"
+                           value="{{ unknown_face_timeout | default(5) }}" min="1" required>
+                    <div class="form-text">How long (in seconds) the system should wait seeing an unrecognized face before marking it as "Unknown". Minimum 1 second.</div>
+                </div>
+            </div>
+
+            <hr> <!-- Separator -->
+
+            <button type="submit" class="btn btn-primary mt-3 w-100">Save All Settings</button>
         </form>
          <div class="button-container">
              <a href="{{ url_for('index') }}" class="back-button">Back to Home</a>
