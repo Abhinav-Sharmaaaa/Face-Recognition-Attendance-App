@@ -105,6 +105,18 @@
 
             <hr> <!-- Separator -->
 
+            <!-- Unknown Log Interval Setting -->
+            <div class="mb-3 row">
+                <label for="unknown_log_interval_seconds" class="col-sm-4 col-form-label">Unknown Log Interval (seconds):</label>
+                <div class="col-sm-8">
+                    <input type="number" class="form-control" id="unknown_log_interval_seconds" name="unknown_log_interval_seconds"
+                           value="{{ unknown_log_interval_seconds | default(60) }}" min="1" required>
+                    <div class="form-text">How long (in seconds) to wait before logging the same unknown person again. Minimum 1 second.</div>
+                </div>
+            </div>
+
+            <hr> <!-- Separator -->
+
             <button type="submit" class="btn btn-primary mt-3 w-100">Save All Settings</button>
         </form>
          <div class="button-container">

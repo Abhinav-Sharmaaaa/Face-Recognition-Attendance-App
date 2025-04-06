@@ -116,8 +116,8 @@
                             <td>{{ log.timestamp_str }}</td>
                             <td>{{ log.status_at_log }}</td>
                             <td>
-                                {% if log.type == 'unknown_sighting' and log.face_image_base64 %}
-                                    <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face" class="log-image">
+                                {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
+                                    <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face" class="log-image">
                                 {% else %}
                                     N/A
                                 {% endif %}
@@ -148,8 +148,8 @@
                                                 <td>{{ log.timestamp_str }}</td>
                                                 <td>{{ log.status_at_log }}</td>
                                                 <td>
-                                                    {% if log.type == 'unknown_sighting' and log.face_image_base64 %}
-                                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face" class="log-image-nested">
+                                                    {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
+                                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face" class="log-image-nested">
                                                     {% else %}
                                                         N/A
                                                     {% endif %}
@@ -169,6 +169,27 @@
                     <td colspan="5" style="text-align: center;">No log entries found.</td>
                 </tr>
             {% endif %}
+
+            {# Add section for Unknown Logs #}
+            {% if unknown_logs %}
+                {% for log in unknown_logs %}
+                <tr>
+                    <td>{{ log.type }}</td>
+                    <td>Unknown (ID: {{ log._id }})</td> {# Display MongoDB ID for reference #}
+                    <td>{{ log.timestamp_str }}</td>
+                    <td>{{ log.status_at_log }}</td>
+                    <td>
+                        {% if log.face_image_base64 %}
+                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face" class="log-image">
+                        {% else %}
+                            No Image
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+            {# End section for Unknown Logs #}
+
         </tbody>
     </table>
 

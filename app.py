@@ -297,27 +297,13 @@ def generate_frames():
     last_known_faces = {} # Store last detected faces for smoother display
     india_tz = pytz.timezone('Asia/Kolkata') # Timezone for logging
     seen_log_collection = mongo.db.seen_log # Collection for logging ALL sightings
-    last_log_times = {} # Dictionary to track last log time for each person
+    last_log_times = {} # Dictionary to track last log time for each KNOWN person
     log_interval = timedelta(minutes=1) # Set the minimum interval between logs for KNOWN faces
+    last_unknown_log_time = None # Timestamp of the last logged unknown face
+    unknown_log_interval_seconds = config.get('unknown_log_interval_seconds', 60) # Default to 60 seconds if not set
+    unknown_log_interval = timedelta(seconds=unknown_log_interval_seconds)
+    logging.info(f"Unknown face log interval set to: {unknown_log_interval_seconds} seconds.")
 
-    # --- Load and Validate Unknown Face Timeout ---
-    try:
-        # Load from config, default to 5 if missing or invalid type later
-        unknown_face_timeout_sec = config.get('unknown_face_timeout', 5)
-        # Ensure it's an integer
-        unknown_face_timeout_sec = int(unknown_face_timeout_sec)
-        # Ensure it's at least 1 second
-        if unknown_face_timeout_sec < 1:
-            logging.warning(f"Configured unknown_face_timeout ({unknown_face_timeout_sec}) is less than 1. Defaulting to 5 seconds.")
-            unknown_face_timeout_sec = 5
-    except (ValueError, TypeError):
-        logging.warning(f"Invalid or missing unknown_face_timeout ('{config.get('unknown_face_timeout')}') in config. Defaulting to 5 seconds.")
-        unknown_face_timeout_sec = 5
-    logging.info(f"Using unknown face timeout: {unknown_face_timeout_sec} seconds.")
-    # --- End Timeout Loading ---
-
-    unknown_face_start_time = None # Track when an unknown face sequence started
-    last_frame_had_unknown = False # Track if the *previous* processed frame had an unknown face
 
     while True:
         success, frame = cap.read()
@@ -405,10 +391,6 @@ def generate_frames():
 
                     # --- Known Face Logging ---
                     if recognized_user_name:
-                        # Reset unknown face tracking if a known face is seen
-                        unknown_face_start_time = None
-                        last_frame_had_unknown = False
-
                         now = current_time_india
                         last_logged = last_log_times.get(recognized_user_name)
                         if last_logged is None or (now - last_logged) >= log_interval:
@@ -421,57 +403,47 @@ def generate_frames():
                             except Exception as db_err:
                                 logging.error(f"Error inserting known sighting log for {recognized_user_name}: {db_err}")
 
-                    # --- Unknown Face Logging (with Timeout) ---
-                    elif status_text == "Unknown Face":
-                        if not last_frame_had_unknown:
-                            # First time seeing an unknown face in this sequence
-                            unknown_face_start_time = current_time_india
-                            last_frame_had_unknown = True
-                            logging.debug(f"Unknown face detected, starting timer at {unknown_face_start_time}.")
-                        else:
-                            # Continuously seeing unknown face, check timeout
-                            if unknown_face_start_time and (current_time_india - unknown_face_start_time) >= timedelta(seconds=unknown_face_timeout_sec):
-                                logging.info(f"Unknown face timeout ({unknown_face_timeout_sec}s) reached. Logging.")
+                    # --- Unknown/Low Match/Error Face Logging (with Interval) ---
+                    # Log if status is "Unknown Face", "Low Match", or "Processing Error"
+                    elif status_text == "Unknown Face" or status_text.startswith("Low Match") or status_text == "Processing Error":
+                        now = current_time_india
+                        # Check if interval has passed since last unknown log
+                        if last_unknown_log_time is None or (now - last_unknown_log_time) >= unknown_log_interval:
+                            # Determine log type based on status
+                            if status_text == "Processing Error":
+                                log_entry['type'] = 'processing_error_sighting' # More specific type
+                                log_entry['error_details'] = "Failed to generate face embedding" # Add context
+                            else:
                                 log_entry['type'] = 'unknown_sighting'
-                                # Optionally add cropped face image
-                                try:
-                                    (x, y, w, h) = box
-                                    if x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= processing_frame.shape[1] and y + h <= processing_frame.shape[0]:
-                                        cropped_face = processing_frame[y:y+h, x:x+w]
-                                        if cropped_face.size > 0:
-                                            _, buffer = cv2.imencode('.jpg', cropped_face)
-                                            log_entry['face_image_base64'] = base64.b64encode(buffer).decode('utf-8')
-                                        else: logging.warning("Cropped unknown face is empty, logging without image.")
-                                    else: logging.warning(f"Invalid box coordinates for cropping unknown face: {box}, frame shape: {processing_frame.shape}")
 
-                                    seen_log_collection.insert_one(log_entry)
-                                    logging.info(f"Logged unknown face sighting {'with image' if 'face_image_base64' in log_entry else 'without image'}.")
+                            # Optionally add cropped face image (attempt even for errors if box exists)
+                            try:
+                                (x, y, w, h) = box
+                                if x >= 0 and y >= 0 and w > 0 and h > 0 and x + w <= processing_frame.shape[1] and y + h <= processing_frame.shape[0]:
+                                    cropped_face = processing_frame[y:y+h, x:x+w]
+                                    if cropped_face.size > 0:
+                                        _, buffer = cv2.imencode('.jpg', cropped_face)
+                                        log_entry['face_image_base64'] = base64.b64encode(buffer).decode('utf-8')
+                                    else: logging.warning("Cropped unknown/low match face is empty, logging without image.")
+                                else: logging.warning(f"Invalid box coordinates for cropping unknown/low match face: {box}, frame shape: {processing_frame.shape}")
+                            except Exception as img_err:
+                                 logging.error(f"Error processing image for unknown/low match sighting log: {img_err}")
+                                 # Clear potentially partial image data if error occurred
+                                 log_entry.pop('face_image_base64', None)
 
-                                    # Reset timer *only* after logging to prevent immediate re-logging
-                                    unknown_face_start_time = None
-                                    # DO NOT reset last_frame_had_unknown here. It will be handled based on the *next* frame's status.
+                            # Attempt to insert the log entry AFTER image processing attempt
+                            try:
+                                seen_log_collection.insert_one(log_entry)
+                                last_unknown_log_time = now # Update last log time
+                                logging.info(f"Logged unknown/low match face sighting ({status_text}) {'with image' if 'face_image_base64' in log_entry else 'without image'}. Interval passed.")
+                            except Exception as db_err:
+                                logging.error(f"Error inserting unknown/low match sighting log into DB: {db_err}")
+                        # else: # Optional: Log that an unknown face was seen but not logged due to interval
+                        #     logging.debug(f"Unknown/low match face detected ({status_text}), but not logged due to interval.")
 
-                                except Exception as log_err:
-                                    logging.error(f"Error preparing or inserting unknown sighting log: {log_err}")
-                        # else: # Timer running but timeout not reached OR timer not running (already logged)
-                        #    logging.debug("Unknown face seen, timeout not reached or already logged.")
-
-                        # Crucially, ensure last_frame_had_unknown is set correctly *for the next iteration*
-                        last_frame_had_unknown = True # Since this frame *is* unknown
-
-                    # --- Other Statuses (Low Match, Error) ---
-                    else: # Status is NOT 'Unknown Face' and NOT 'known_sighting'
-                        # Reset unknown face tracking if status is not 'Unknown Face'
-                        unknown_face_start_time = None
-                        last_frame_had_unknown = False
-                        # Currently not logging low matches or errors to seen_log
+                    # --- Other Statuses (Currently not logged) ---
 
                 # --- End Logging Sighting Logic ---
-
-            else: # No box detected in this frame
-                # Reset unknown face tracking if no face is detected
-                unknown_face_start_time = None
-                last_frame_had_unknown = False
 
             # Update last known faces for display smoothing
             last_known_faces = current_detected_faces if box else {} # Use current if box detected, else clear
@@ -823,6 +795,36 @@ def configure():
     config = load_config()
 
     if request.method == 'POST':
+        # --- Unknown Face Log Interval Handling ---
+        unknown_interval_str = request.form.get('unknown_log_interval_seconds')
+        unknown_interval_flash = {'message': "", 'category': "info"} # Default category
+
+        if unknown_interval_str is not None: # Check if the field exists
+            try:
+                unknown_interval_val = int(unknown_interval_str)
+                if unknown_interval_val >= 1: # Minimum interval of 1 second
+                    config['unknown_log_interval_seconds'] = unknown_interval_val
+                    unknown_interval_flash['message'] = f"Unknown face log interval successfully set to {unknown_interval_val} seconds."
+                    unknown_interval_flash['category'] = "success"
+                    logging.info(f"Configuration updated: unknown_log_interval_seconds = {unknown_interval_val}")
+                else:
+                    unknown_interval_flash['message'] = "Unknown face log interval must be 1 second or greater. Value not saved."
+                    unknown_interval_flash['category'] = "warning"
+                    logging.warning(f"Invalid unknown_log_interval_seconds value received: {unknown_interval_val}. Not saved.")
+            except (ValueError, TypeError):
+                unknown_interval_flash['message'] = "Invalid input for unknown face log interval. Please enter a whole number (e.g., 60). Value not saved."
+                unknown_interval_flash['category'] = "warning"
+                logging.warning(f"Invalid unknown_log_interval_seconds input received: '{unknown_interval_str}'. Not saved.")
+            except Exception as e:
+                logging.error(f"Error processing unknown_log_interval_seconds '{unknown_interval_str}': {e}")
+                unknown_interval_flash['message'] = "An unexpected error occurred saving the unknown face log interval."
+                unknown_interval_flash['category'] = "error"
+        else:
+             # This case might occur if the field name is wrong in the HTML or request is malformed
+             unknown_interval_flash['message'] = "Unknown face log interval field was missing from the request. Value not saved."
+             unknown_interval_flash['category'] = "warning"
+             logging.warning("unknown_log_interval_seconds field missing from POST request.")
+
         # --- Stop Time Handling ---
         enable_stop_time = request.form.get('enable_stop_time') == 'on'
         stop_time_str = request.form.get('stop_time')
@@ -861,39 +863,34 @@ def configure():
         stop_time_flash = {'message': flash_message, 'category': flash_category}
 
 
-        # --- Unknown Face Timeout Handling ---
-        unknown_timeout_str = request.form.get('unknown_face_timeout')
-        unknown_timeout_flash = {'message': "", 'category': "info"} # Default category
+        # --- Unknown Face Log Interval Handling ---
+        unknown_interval_str = request.form.get('unknown_log_interval_seconds')
+        unknown_interval_flash = {'message': "", 'category': "info"} # Default category
 
-        if unknown_timeout_str is not None: # Check if the field exists in the form data
+        if unknown_interval_str is not None: # Check if the field exists
             try:
-                unknown_timeout_val = int(unknown_timeout_str)
-                if unknown_timeout_val >= 1:
-                    # Valid input, update config
-                    config['unknown_face_timeout'] = unknown_timeout_val
-                    unknown_timeout_flash['message'] = f"Unknown face timeout successfully set to {unknown_timeout_val} seconds."
-                    unknown_timeout_flash['category'] = "success"
-                    logging.info(f"Configuration updated: unknown_face_timeout = {unknown_timeout_val}")
+                unknown_interval_val = int(unknown_interval_str)
+                if unknown_interval_val >= 1: # Minimum interval of 1 second
+                    config['unknown_log_interval_seconds'] = unknown_interval_val
+                    unknown_interval_flash['message'] = f"Unknown face log interval successfully set to {unknown_interval_val} seconds."
+                    unknown_interval_flash['category'] = "success"
+                    logging.info(f"Configuration updated: unknown_log_interval_seconds = {unknown_interval_val}")
                 else:
-                    # Input is integer but less than 1
-                    unknown_timeout_flash['message'] = "Unknown face timeout must be 1 second or greater. Value not saved."
-                    unknown_timeout_flash['category'] = "warning"
-                    logging.warning(f"Invalid unknown_face_timeout value received: {unknown_timeout_val}. Not saved.")
+                    unknown_interval_flash['message'] = "Unknown face log interval must be 1 second or greater. Value not saved."
+                    unknown_interval_flash['category'] = "warning"
+                    logging.warning(f"Invalid unknown_log_interval_seconds value received: {unknown_interval_val}. Not saved.")
             except (ValueError, TypeError):
-                # Input is not a valid integer
-                unknown_timeout_flash['message'] = "Invalid input for unknown face timeout. Please enter a whole number (e.g., 5). Value not saved."
-                unknown_timeout_flash['category'] = "warning"
-                logging.warning(f"Invalid unknown_face_timeout input received: '{unknown_timeout_str}'. Not saved.")
+                unknown_interval_flash['message'] = "Invalid input for unknown face log interval. Please enter a whole number (e.g., 60). Value not saved."
+                unknown_interval_flash['category'] = "warning"
+                logging.warning(f"Invalid unknown_log_interval_seconds input received: '{unknown_interval_str}'. Not saved.")
             except Exception as e:
-                # Catch other potential errors during processing
-                logging.error(f"Error processing unknown_face_timeout '{unknown_timeout_str}': {e}")
-                unknown_timeout_flash['message'] = "An unexpected error occurred saving the unknown face timeout."
-                unknown_timeout_flash['category'] = "error"
+                logging.error(f"Error processing unknown_log_interval_seconds '{unknown_interval_str}': {e}")
+                unknown_interval_flash['message'] = "An unexpected error occurred saving the unknown face log interval."
+                unknown_interval_flash['category'] = "error"
         else:
-             # Handle case where the field might be missing from the form entirely (shouldn't happen with standard form submission)
-             unknown_timeout_flash['message'] = "Unknown face timeout field was missing from the request. Value not saved."
-             unknown_timeout_flash['category'] = "warning"
-             logging.warning("unknown_face_timeout field missing from POST request.")
+             unknown_interval_flash['message'] = "Unknown face log interval field was missing from the request. Value not saved."
+             unknown_interval_flash['category'] = "warning"
+             logging.warning("unknown_log_interval_seconds field missing from POST request.")
 
 
         # --- Save Configuration and Flash Messages ---
@@ -902,30 +899,33 @@ def configure():
             # Flash messages after saving is confirmed successful
             if stop_time_flash.get('message'):
                  flash(stop_time_flash['message'], stop_time_flash['category'])
-            if unknown_timeout_flash.get('message'):
-                 flash(unknown_timeout_flash['message'], unknown_timeout_flash['category'])
+            if unknown_interval_flash.get('message'):
+                 flash(unknown_interval_flash['message'], unknown_interval_flash['category'])
         except Exception as e:
             logging.error(f"Error saving configuration: {e}")
             flash("Failed to save one or more configuration settings.", "error")
+            # Still redirect even on save error
+            return redirect(url_for('configure'))
 
         # Redirect back to configure page after POST to show updated values/flash messages
         return redirect(url_for('configure'))
 
     # GET request
+    # Load interval for GET request, ensuring it's an int and >= 1 for display
+    try:
+        unknown_log_interval_seconds = int(config.get('unknown_log_interval_seconds', 60)) # Default 60s
+        if unknown_log_interval_seconds < 1:
+            unknown_log_interval_seconds = 60 # Default to 60 if stored value is invalid
+    except (ValueError, TypeError):
+        unknown_log_interval_seconds = 60 # Default to 60 if stored value is not an int
+
     current_stop_time = config.get('stop_time', '')
     stop_time_enabled = config.get('stop_time_enabled', False)
-    # Load timeout for GET request, ensuring it's an int and >= 1 for display
-    try:
-        unknown_face_timeout = int(config.get('unknown_face_timeout', 5))
-        if unknown_face_timeout < 1:
-            unknown_face_timeout = 5 # Default to 5 if stored value is invalid
-    except (ValueError, TypeError):
-        unknown_face_timeout = 5 # Default to 5 if stored value is not an int
 
     return render_template('configure.html',
                            current_stop_time=current_stop_time,
                            stop_time_enabled=stop_time_enabled,
-                           unknown_face_timeout=unknown_face_timeout) # Pass validated value to template
+                           unknown_log_interval_seconds=unknown_log_interval_seconds) # Pass validated value to template
 
 
 # Removed upload_photo route as registration handles uploads now.
