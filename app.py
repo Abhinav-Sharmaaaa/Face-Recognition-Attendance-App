@@ -1067,11 +1067,13 @@ def reset_seen_log():
         result = seen_log_collection.delete_many({}) # Delete all documents
         deleted_count = result.deleted_count
         logging.info(f"Seen log reset requested by admin. {deleted_count} records deleted.")
-        flash(f"Seen log successfully reset. {deleted_count} records removed.", "success")
+        # Removed flash message here
     except Exception as e:
         logging.error(f"Error resetting seen log: {e}")
         flash("An error occurred while resetting the seen log.", "error")
 
+    # Redirect back to the seen log page regardless of success or failure
+    return redirect(url_for('seen_log_view'))
 @app.route('/get_attendance')
 def get_attendance():
     """ Endpoint to calculate and return attendance (first/last seen) for known users for the current day. """
