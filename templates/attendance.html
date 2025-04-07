@@ -8,8 +8,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}"> <!-- Added glass theme -->
     <!-- Removed inline styles, now using glass_theme.css and styles.css -->
 </head>
-<body>
+<body data-theme="light"> <!-- Added data-theme attribute -->
     <div class="container glass-container"> <!-- Added glass-container class -->
+        <!-- Theme Toggle Switch -->
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+            <em>Toggle Theme</em>
+        </div>
+        <!-- End Theme Toggle Switch -->
         <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
 
         <!-- Flash Messages -->
@@ -56,5 +65,46 @@
         {% endif %}
 
     </div>
+    <!-- Theme Switching Script -->
+    <script>
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        const bodyElement = document.body; // Use document.body
+
+        function setTheme(theme) {
+            bodyElement.setAttribute('data-theme', theme); // Set on body
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                toggleSwitch.checked = true;
+            } else {
+                toggleSwitch.checked = false;
+            }
+        }
+
+        if (currentTheme) {
+            setTheme(currentTheme);
+        } else {
+            // Default to light theme if no preference saved
+            setTheme('light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                setTheme('dark');
+            } else {
+                setTheme('light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+
+        // Ensure the toggle reflects the initial theme on load
+        if (currentTheme === 'dark') {
+            toggleSwitch.checked = true;
+        } else {
+            toggleSwitch.checked = false; // Ensure it's unchecked for light theme
+        }
+    </script>
+    <!-- End Theme Switching Script -->
 </body>
 </html>

@@ -1,16 +1,188 @@
+/* Theme Variables */
+:root {
+    --background-start: #1a1a2e; /* Dark gradient start */
+    --background-end: #0f3057;   /* Dark gradient end */
+    --background-color: #1a1a2e; /* Dark fallback */
+    --text-color: #E0F2F7;       /* Default dark theme text */
+    --light-text-color: #E0F2F7; /* Text color for dark backgrounds */
+    --glass-bg: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    --glass-text: #ffffff;
+    --glass-link: #a8d5ff;
+    --glass-link-hover: #ffffff;
+    --input-bg: rgba(255, 255, 255, 0.15);
+    --input-border: rgba(255, 255, 255, 0.2);
+    --input-focus-border: rgba(255, 255, 255, 0.5);
+    --input-focus-bg: rgba(255, 255, 255, 0.2);
+    --input-text: #ffffff;
+    --input-placeholder: rgba(255, 255, 255, 0.6);
+    --button-bg: rgba(255, 255, 255, 0.15);
+    --button-border: rgba(255, 255, 255, 0.2);
+    --button-text: #ffffff;
+    --button-hover-bg: rgba(255, 255, 255, 0.25);
+    --button-hover-border: rgba(255, 255, 255, 0.4);
+    --btn-option-bg: rgba(255, 255, 255, 0.1);
+    --btn-option-border: rgba(255, 255, 255, 0.15);
+    --btn-option-hover-bg: rgba(255, 255, 255, 0.18);
+    --btn-option-hover-border: rgba(255, 255, 255, 0.25);
+    --body-bg-image: linear-gradient(135deg, #3a1c4b, var(--background-start), var(--background-end)); /* Dark theme gradient */
+    --transition-speed: 0.3s;
+
+    /* Specific Glass Theme Variables - Dark */
+    --glass-specific-bg: rgba(40, 40, 70, 0.6); /* Darker, slightly purple glass */
+    --glass-specific-border: rgba(255, 255, 255, 0.15);
+    --glass-specific-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.05);
+    --glass-specific-text: #EAEAEA;
+    --glass-specific-link: #b3d9ff;
+    --glass-specific-link-hover: #ffffff;
+    --glass-specific-input-bg: rgba(255, 255, 255, 0.1);
+    --glass-specific-input-border: rgba(255, 255, 255, 0.2);
+    --glass-specific-input-text: #EAEAEA;
+    --glass-specific-button-bg: rgba(100, 100, 150, 0.3); /* Muted purple button */
+    --glass-specific-button-border: rgba(255, 255, 255, 0.2);
+    --glass-specific-button-text: #EAEAEA;
+    --glass-specific-button-hover-bg: rgba(120, 120, 170, 0.4);
+}
+
+body.light-theme {
+    --background-start: #ece9e6; /* Light gradient start */
+    --background-end: #ffffff;   /* Light gradient end */
+    --background-color: #f4f4f4; /* Simple light fallback */
+    --text-color: #333;          /* Default light theme text */
+    --light-text-color: #333;    /* Darker text for light backgrounds */
+    --glass-bg: rgba(255, 255, 255, 0.7); /* Less transparent glass */
+    --glass-border: rgba(200, 200, 200, 0.5);
+    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2); /* Lighter shadow */
+    --glass-text: #333;
+    --glass-link: #007bff;
+    --glass-link-hover: #0056b3;
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-focus-border: #80bdff;
+    --input-focus-bg: #ffffff;
+    --input-text: #495057;
+    --input-placeholder: #6c757d;
+    --button-bg: #007bff;
+    --button-border: #007bff;
+    --button-text: #ffffff;
+    --button-hover-bg: #0056b3;
+    --button-hover-border: #0056b3;
+    --btn-option-bg: #f8f9fa;
+    --btn-option-border: #dee2e6;
+    --btn-option-hover-bg: #e2e6ea;
+    --btn-option-hover-border: #ced4da;
+    --body-bg-image: linear-gradient(to right, var(--background-start), var(--background-end)); /* Light theme gradient */
+
+    /* Specific Glass Theme Variables - Light */
+    --glass-specific-bg: rgba(255, 255, 255, 0.8); /* Lighter, clearer glass */
+    --glass-specific-border: rgba(200, 200, 200, 0.6);
+    --glass-specific-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Softer shadow */
+    --glass-specific-text: #212529; /* Darker text for readability */
+    --glass-specific-link: #0056b3;
+    --glass-specific-link-hover: #003d80;
+    --glass-specific-input-bg: rgba(255, 255, 255, 0.9);
+    --glass-specific-input-border: #ced4da;
+    --glass-specific-input-text: #495057;
+    --glass-specific-button-bg: #e9ecef; /* Light grey button */
+    --glass-specific-button-border: #ced4da;
+    --glass-specific-button-text: #212529;
+    --glass-specific-button-hover-bg: #dee2e6;
+}
+
+/* Theme Toggle Switch Styles */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+    position: fixed; /* Or absolute, depending on layout */
+    top: 20px;
+    right: 20px;
+    z-index: 1000; /* Ensure it's above other elements */
+}
+
+.theme-switch {
+    display: inline-block;
+    height: 24px; /* Smaller height */
+    position: relative;
+    width: 48px; /* Smaller width */
+    margin-left: 10px;
+}
+
+.theme-switch input {
+    display:none;
+}
+
+.slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+    border-radius: 24px; /* Keep it round */
+}
+
+.slider:before {
+    background-color: #fff;
+    bottom: 3px; /* Adjust position */
+    content: "";
+    height: 18px; /* Smaller handle */
+    left: 3px; /* Adjust position */
+    position: absolute;
+    transition: .4s;
+    width: 18px; /* Smaller handle */
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #663399; /* A purple color, adjust as needed */
+}
+
+body.light-theme input:checked + .slider {
+    background-color: #007bff; /* Blue for light theme */
+}
+
+
+input:checked + .slider:before {
+    transform: translateX(24px); /* Adjust translation distance */
+}
+
+.theme-switch-wrapper span {
+    color: var(--text-color); /* Use variable for text color */
+    font-size: 0.9em;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Add shadow for visibility */
+}
+
+body.light-theme .theme-switch-wrapper span {
+    text-shadow: none; /* Remove shadow in light mode if not needed */
+}
+
+
+/* Apply Transitions */
+body, .glass-container, input, select, button, .btn-option, .slider, .theme-switch-wrapper span {
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease, background var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+/* Add specific transition for slider:before */
+.slider:before {
+    transition: transform var(--transition-speed) ease, background-color var(--transition-speed) ease;
+}
+
+
 *, *::before, *::after {
     box-sizing: border-box; /* Apply border-box globally */
 }
 
 body {
     font-family: 'Poppins', sans-serif;
+    background: var(--body-bg-image); /* Use variable for background */
+    background-color: var(--background-color); /* Fallback color */
+    background-attachment: fixed; /* Keep background fixed during scroll */
+    color: var(--text-color); /* Use variable for text color */
+    font-family: 'Poppins', sans-serif;
     /* --- UPDATED BACKGROUND --- */
     /* Use a dark background. Replace with an image or complex gradient for the full effect shown */
-    background-color: #1a1a2e; /* Dark purple/blue base */
-    /* Example using a gradient (simpler than blobs) */
-    /* background: linear-gradient(135deg, #3a1c4b, #1a1a2e, #0f3057); */
-    background-attachment: fixed; /* Keep background fixed during scroll */
-    color: #E0F2F7; /* Lighter base text color for dark background */
     margin: 0;
     padding: 20px;
     display: flex;
@@ -30,17 +202,16 @@ body {
 
 /* --- UPDATED Glassmorphism Container Style --- */
 .glass-container {
-    background: rgba(255, 255, 255, 0.08); /* More transparent */
-    backdrop-filter: blur(20px);       /* Increased blur */
-    -webkit-backdrop-filter: blur(20px); /* Increased blur for Safari */
-    border-radius: 20px;              /* More rounded corners */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Very subtle border */
-    /* Removed default box-shadow, optional subtle inset highlight */
-    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
-    padding: 30px 40px;              /* Adjust padding as needed */
-    margin: 20px auto;               /* Center container */
-    color: #ffffff;                  /* White text for contrast */
-    max-width: 800px; /* Adjusted max-width */
+    background: var(--glass-bg); /* Use variable */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    border: 1px solid var(--glass-border); /* Use variable */
+    box-shadow: var(--glass-shadow); /* Use variable */
+    padding: 30px 40px;
+    margin: 20px auto;
+    color: var(--glass-text); /* Use variable */
+    max-width: 800px;
     width: 90%;
 }
 
@@ -59,17 +230,18 @@ body {
 .glass-container h2,
 .glass-container p,
 .glass-container label {
-    color: #ffffff; /* White text */
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); /* Optional: subtle shadow for readability */
+    color: var(--glass-text); /* Use variable */
+    color: var(--glass-text); /* Use variable */
+    /* Removed text-shadow for cleaner look, can be added back if needed */
 }
 
 .glass-container a {
-    color: #a8d5ff; /* Light blue link color */
-    text-shadow: none;
+    color: var(--glass-link); /* Use variable */
+    text-decoration: none; /* Ensure no default underline */
 }
 
 .glass-container a:hover {
-    color: #ffffff;
+    color: var(--glass-link-hover); /* Use variable */
 }
 
 /* Adjust form styles when inside a glass container */
@@ -79,25 +251,28 @@ body {
     max-width: 100%;
 }
 
+/* Logo styling might need adjustment based on theme, but keep simple for now */
 .logo {
     width: 150px;
     margin-bottom: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Keep logo shadow if desired */
+    /* Shadow might look odd in light theme, consider removing or adjusting */
+    /* box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); */
 }
 
 .welcome-text {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #FFFFFF;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    color: var(--text-color); /* Use theme text color */
+    /* text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); */ /* Optional shadow */
 }
 
 .sub-text {
     font-size: 1.2rem;
-    color: #E0F2F7;
+    color: var(--text-color); /* Use theme text color */
+    opacity: 0.9; /* Slightly less prominent */
     margin-bottom: 30px;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    /* text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); */ /* Optional shadow */
 }
 
 .button-container {
@@ -107,33 +282,33 @@ body {
     gap: 15px;
 }
 
-/* Updated .btn-option to fit new theme */
+/* Updated .btn-option to use theme variables */
 .btn-option {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.1); /* Match glass style */
-    color: #ffffff;
+    background: var(--btn-option-bg); /* Use variable */
+    color: var(--text-color); /* Use variable */
     font-size: 1.1rem;
     font-weight: 600;
     text-decoration: none;
     padding: 15px 20px;
-    border-radius: 15px; /* Match glass rounding */
-    border: 1px solid rgba(255, 255, 255, 0.15); /* Slightly stronger border than main glass */
-    backdrop-filter: blur(5px); /* Optional: slight blur on buttons too */
+    border-radius: 15px;
+    border: 1px solid var(--btn-option-border); /* Use variable */
+    backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    transition: all 0.3s ease-in-out;
+    /* transition is already applied globally */
     width: 180px;
     height: 150px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Adjusted shadow */
 }
 
 .btn-option:hover {
-    background: rgba(255, 255, 255, 0.18);
-    transform: translateY(-5px) scale(1.03); /* Lift effect */
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    border-color: rgba(255, 255, 255, 0.25);
+    background: var(--btn-option-hover-bg); /* Use variable */
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); /* Adjusted shadow */
+    border-color: var(--btn-option-hover-border); /* Use variable */
 }
 
 .btn-option img {
@@ -155,13 +330,13 @@ body {
     }
 }
 
-/* Adjusted h1 for dark background */
+/* Adjusted h1 to use theme variables */
 h1 {
-    color: #ffffff; /* White */
+    color: var(--text-color); /* Use variable */
     font-size: 30px;
     font-weight: 600;
     margin-bottom: 20px;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
+    /* text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); */ /* Optional shadow */
 }
 
 /* Forms inside glass container */
@@ -183,77 +358,77 @@ form label {
     display: block;
     text-align: left;
     margin-top: 15px;
-    margin-bottom: 5px; /* Space below label */
-    color: #e0f2f7; /* Light text color */
+    margin-bottom: 5px;
+    color: var(--text-color); /* Use variable */
 }
 
-/* Style inputs/selects/password for visibility on blurred background */
-input[type="text"], input[type="password"], select { /* Added input[type="password"] */
+/* Style inputs/selects/password using theme variables */
+input[type="text"], input[type="password"], select {
     width: 100%;
     padding: 12px 15px;
-    background-color: rgba(255, 255, 255, 0.15); /* Slightly opaque white */
-    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
-    margin: 5px 0 15px 0; /* Adjust margin */
+    background-color: var(--input-bg); /* Use variable */
+    border: 1px solid var(--input-border); /* Use variable */
+    margin: 5px 0 15px 0;
     font-size: 16px;
-    color: #ffffff; /* White text input */
-    border-radius: 8px; /* More rounded */
-    transition: all 0.3s ease-in-out;
+    color: var(--input-text); /* Use variable */
+    border-radius: 8px;
+    /* transition is already applied globally */
 }
-input[type="text"]::placeholder, input[type="password"]::placeholder, select::placeholder { /* Added input[type="password"] */
-    color: rgba(255, 255, 255, 0.6);
+input[type="text"]::placeholder, input[type="password"]::placeholder, select::placeholder {
+    color: var(--input-placeholder); /* Use variable */
 }
 
-input[type="text"]:focus, input[type="password"]:focus, select:focus { /* Added input[type="password"] */
-    border-color: rgba(255, 255, 255, 0.5); /* White border on focus */
-    background-color: rgba(255, 255, 255, 0.2); /* Slightly less transparent */
+input[type="text"]:focus, input[type="password"]:focus, select:focus {
+    border-color: var(--input-focus-border); /* Use variable */
+    background-color: var(--input-focus-bg); /* Use variable */
     outline: none;
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); /* Subtle white glow */
+    box-shadow: 0 0 8px rgba(128, 189, 255, 0.3); /* Adjusted focus shadow */
 }
 
-/* Style buttons to match */
+/* Style buttons using theme variables */
 button {
-    background-color: rgba(255, 255, 255, 0.15); /* Semi-transparent */
-    color: #ffffff; /* White text */
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 12px 25px; /* Adjust padding */
+    background-color: var(--button-bg); /* Use variable */
+    color: var(--button-text); /* Use variable */
+    border: 1px solid var(--button-border); /* Use variable */
+    padding: 12px 25px;
     font-size: 16px;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
-    margin-top: 25px; /* Increased space above button */
-    transition: all 0.3s ease;
-    display: block; /* Make button block */
-    width: 100%; /* Full width */
+    margin-top: 25px;
+    /* transition is already applied globally */
+    display: block;
+    width: 100%;
 }
 
 button:hover {
-    background-color: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+    background-color: var(--button-hover-bg); /* Use variable */
+    border-color: var(--button-hover-border); /* Use variable */
+    /* box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); */ /* Optional shadow */
 }
 
-#video, #capturedPhoto {
+#video, #capturedPhoto { /* Style video/image elements */
     width: 100%;
     max-width: 340px;
-    border: 2px solid rgba(255, 255, 255, 0.2); /* Match border style */
+    border: 2px solid var(--input-border); /* Use input border color */
     border-radius: 8px;
     margin: 12px 0;
+    background-color: var(--input-bg); /* Give it a slight background */
 }
 
-/* Adjust link colors */
+/* Adjust general link colors (outside glass container) */
 a {
     display: inline-block;
     margin-top: 18px;
-    font-size: 16px; /* Slightly smaller */
-    color: #a8d5ff; /* Light blue */
+    font-size: 16px;
+    color: var(--glass-link); /* Use glass link color as default */
     text-decoration: none;
     font-weight: 500;
-    /* text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); */ /* Remove shadow if not needed */
 }
 
 a:hover {
     text-decoration: underline;
-    color: #ffffff;
+    color: var(--glass-link-hover); /* Use glass link hover color */
 }
 
 .login-container {

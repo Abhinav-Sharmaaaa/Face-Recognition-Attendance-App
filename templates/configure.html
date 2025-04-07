@@ -67,6 +67,16 @@
     <div class="container glass-container"> <!-- Added glass-container class -->
         <h1>Configure Settings</h1>
 
+        <!-- Theme Toggle Switch -->
+        <div class="theme-switch-wrapper" style="text-align: right; margin-bottom: 15px;">
+            <label class="theme-switch" for="theme-checkbox">
+                <input type="checkbox" id="theme-checkbox" />
+                <div class="slider round"></div>
+            </label>
+            <em style="vertical-align: middle; margin-left: 5px;">Toggle Dark Mode</em>
+        </div>
+
+
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -140,6 +150,35 @@
                 // stopTimeInput.value = '';
             }
         });
+
+        // Theme Toggle Logic (Consistent with other pages)
+        const themeToggle = document.getElementById('theme-checkbox');
+        const currentTheme = localStorage.getItem('theme');
+        const bodyElement = document.body; // Cache body element
+
+        // Function to apply theme using data-theme attribute
+        function setTheme(theme) {
+            bodyElement.setAttribute('data-theme', theme); // Set data-theme attribute
+            localStorage.setItem('theme', theme); // Save preference
+            themeToggle.checked = (theme === 'dark'); // Update checkbox state based on 'dark'
+        }
+
+        // Apply saved theme on load or default to light
+        if (currentTheme) {
+            setTheme(currentTheme);
+        } else {
+            setTheme('light'); // Default to light theme
+        }
+
+        // Add event listener for toggle change
+        themeToggle.addEventListener('change', function() {
+            if (this.checked) {
+                setTheme('dark');
+            } else {
+                setTheme('light');
+            }
+        });
+
     </script>
 </body>
 </html>
