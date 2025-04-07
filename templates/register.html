@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register User</title>
-    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
 </head>
 <body>
+    <div class="container glass-container">
     <h1>Register a User</h1>
     <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
         Role:
@@ -109,5 +111,6 @@
         // --- End of added JavaScript ---
 
     </script>
+    </div>
 </body>
 </html>

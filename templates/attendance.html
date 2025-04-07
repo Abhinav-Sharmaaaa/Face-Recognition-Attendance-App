@@ -5,83 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Daily Attendance</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-        /* Additional styles specific to this page */
-        .attendance-table {
-            width: 90%;
-            margin: 20px auto;
-            border-collapse: collapse;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .attendance-table th, .attendance-table td {
-            border: 1px solid #ddd;
-            padding: 12px 15px;
-            text-align: left;
-        }
-        .attendance-table th {
-            background-color: #4CAF50; /* Green header */
-            color: white;
-            font-weight: bold;
-        }
-        .attendance-table tr:nth-child(even) {
-            background-color: #f2f2f2; /* Light grey for even rows */
-        }
-        .attendance-table tr:hover {
-            background-color: #ddd; /* Darker grey on hover */
-        }
-        .no-records {
-            text-align: center;
-            padding: 20px;
-            color: #777;
-        }
-        .flash-messages {
-            list-style: none;
-            padding: 0;
-            margin: 1em 0;
-        }
-        .flash-messages li {
-            padding: 0.75em 1.25em;
-            margin-bottom: 1em;
-            border: 1px solid transparent;
-            border-radius: 0.25rem;
-        }
-        .flash-messages .success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-        .flash-messages .error {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-        .flash-messages .warning {
-            color: #856404;
-            background-color: #fff3cd;
-            border-color: #ffeeba;
-        }
-        .flash-messages .info {
-            color: #0c5460;
-            background-color: #d1ecf1;
-            border-color: #bee5eb;
-        }
-        .back-link {
-            display: inline-block;
-            margin: 20px 0 0 5%; /* Align with table margin */
-            padding: 10px 15px;
-            background-color: #555;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-        .back-link:hover {
-            background-color: #333;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}"> <!-- Added glass theme -->
+    <!-- Removed inline styles, now using glass_theme.css and styles.css -->
 </head>
 <body>
-    <div class="container">
+    <div class="container glass-container"> <!-- Added glass-container class -->
         <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
 
         <!-- Flash Messages -->

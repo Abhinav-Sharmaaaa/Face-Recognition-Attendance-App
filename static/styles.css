@@ -1,53 +1,104 @@
-
 *, *::before, *::after {
     box-sizing: border-box; /* Apply border-box globally */
 }
 
 body {
     font-family: 'Poppins', sans-serif;
-    background: linear-gradient(to bottom, #f0f8ff, #91c1f4);
-    color: #004080; 
+    /* --- UPDATED BACKGROUND --- */
+    /* Use a dark background. Replace with an image or complex gradient for the full effect shown */
+    background-color: #1a1a2e; /* Dark purple/blue base */
+    /* Example using a gradient (simpler than blobs) */
+    /* background: linear-gradient(135deg, #3a1c4b, #1a1a2e, #0f3057); */
+    background-attachment: fixed; /* Keep background fixed during scroll */
+    color: #E0F2F7; /* Lighter base text color for dark background */
     margin: 0;
-    padding: 20px; /* Added padding */
-    display: flex; /* Using flex for centering might be better on specific containers */
+    padding: 20px;
+    display: flex;
     flex-direction: column;
     align-items: center;
-    min-height: 100vh; /* Ensure body takes full height */
+    min-height: 100vh;
 }
 
-.container {
+.container { /* General page container, NOT the glass itself */
     text-align: center;
-    width: 90%; /* Give container a width */
-    max-width: 1200px; /* Set a max-width */
-    margin: 20px auto; /* Center container and add margin */
-    padding: 20px; /* Add padding inside container */
-    background-color: rgba(255, 255, 255, 0.8); /* Optional: slight background for contrast */
-    border-radius: 10px; /* Optional: rounded corners */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Optional: subtle shadow */
-    overflow: hidden; /* Add overflow hidden to prevent content spillover */
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0; /* Remove padding if glass container provides it */
+    /* Removed background/shadow for this outer container */
 }
 
+/* --- UPDATED Glassmorphism Container Style --- */
+.glass-container {
+    background: rgba(255, 255, 255, 0.08); /* More transparent */
+    backdrop-filter: blur(20px);       /* Increased blur */
+    -webkit-backdrop-filter: blur(20px); /* Increased blur for Safari */
+    border-radius: 20px;              /* More rounded corners */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Very subtle border */
+    /* Removed default box-shadow, optional subtle inset highlight */
+    box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.1);
+    padding: 30px 40px;              /* Adjust padding as needed */
+    margin: 20px auto;               /* Center container */
+    color: #ffffff;                  /* White text for contrast */
+    max-width: 800px; /* Adjusted max-width */
+    width: 90%;
+}
+
+/* Style the logo specifically within the glass container */
+.glass-container > img {
+    width: 100px; /* Adjust size as needed */
+    height: auto;
+    margin-bottom: 25px; /* Space below logo */
+    margin-top: 10px; /* Space above logo */
+    /* Removed border-radius and shadow from general logo class */
+}
+
+
+/* Ensure elements inside the glass container have appropriate contrast */
+.glass-container h1,
+.glass-container h2,
+.glass-container p,
+.glass-container label {
+    color: #ffffff; /* White text */
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3); /* Optional: subtle shadow for readability */
+}
+
+.glass-container a {
+    color: #a8d5ff; /* Light blue link color */
+    text-shadow: none;
+}
+
+.glass-container a:hover {
+    color: #ffffff;
+}
+
+/* Adjust form styles when inside a glass container */
+.glass-container form {
+    box-shadow: none;
+    padding: 0;
+    max-width: 100%;
+}
 
 .logo {
     width: 150px;
     margin-bottom: 20px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Keep logo shadow if desired */
 }
-
 
 .welcome-text {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #002f6c; 
+    color: #FFFFFF;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .sub-text {
     font-size: 1.2rem;
-    color: #0056b3;
+    color: #E0F2F7;
     margin-bottom: 30px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
-
 
 .button-container {
     display: flex;
@@ -56,30 +107,33 @@ body {
     gap: 15px;
 }
 
-
+/* Updated .btn-option to fit new theme */
 .btn-option {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: white;
-    color: #004080;
+    background: rgba(255, 255, 255, 0.1); /* Match glass style */
+    color: #ffffff;
     font-size: 1.1rem;
     font-weight: 600;
     text-decoration: none;
     padding: 15px 20px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0, 64, 128, 0.2);
+    border-radius: 15px; /* Match glass rounding */
+    border: 1px solid rgba(255, 255, 255, 0.15); /* Slightly stronger border than main glass */
+    backdrop-filter: blur(5px); /* Optional: slight blur on buttons too */
+    -webkit-backdrop-filter: blur(5px);
     transition: all 0.3s ease-in-out;
     width: 180px;
     height: 150px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* Subtle shadow */
 }
 
 .btn-option:hover {
-    background: #004080;
-    color: white;
-    transform: scale(1.05);
-    box-shadow: 0 8px 20px rgba(0, 64, 128, 0.3);
+    background: rgba(255, 255, 255, 0.18);
+    transform: translateY(-5px) scale(1.03); /* Lift effect */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .btn-option img {
@@ -96,117 +150,123 @@ body {
     .button-container {
         flex-direction: column;
     }
+    .glass-container {
+        padding: 20px;
+    }
 }
 
-/* Removed redundant body styles - properties merged into the first body definition */
-
+/* Adjusted h1 for dark background */
 h1 {
-    color: #0056b3; /* Keeping this h1 style, ensure it doesn't conflict with .welcome-text */
+    color: #ffffff; /* White */
     font-size: 30px;
-    font-weight: 600; /* Merged font-weight from later definition */
+    font-weight: 600;
     margin-bottom: 20px;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-
+/* Forms inside glass container */
 form {
-    background-color: #ffffff;
-    padding: 25px;
+    /* background removed */
+    padding: 0; /* Padding handled by glass-container */
     border-radius: 12px;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
-    max-width: 420px; /* Set max-width */
-    width: 100%; /* Allow shrinking */
-    text-align: center;
-    margin-left: auto; /* Center form if container is wider */
-    margin-right: auto; /* Center form if container is wider */
+    box-shadow: none; /* Shadow handled by glass-container */
+    max-width: 420px;
+    width: 100%;
+    text-align: left; /* Align labels left */
+    margin-left: auto;
+    margin-right: auto;
 }
-
 
 form label {
-    font-size: 18px;
-    font-weight: bold;
+    font-size: 16px; /* Slightly smaller label */
+    font-weight: 500;
     display: block;
     text-align: left;
-    margin-top: 10px;
+    margin-top: 15px;
+    margin-bottom: 5px; /* Space below label */
+    color: #e0f2f7; /* Light text color */
 }
 
-
-form input[name="name"] + br::before {
-    content: " ";
-    font-size: 20px;
-    font-weight: bold;
-}
-
-
-input[type="text"], select {
+/* Style inputs/selects/password for visibility on blurred background */
+input[type="text"], input[type="password"], select { /* Added input[type="password"] */
     width: 100%;
-    padding: 12px;
-    margin: 10px 0;
+    padding: 12px 15px;
+    background-color: rgba(255, 255, 255, 0.15); /* Slightly opaque white */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+    margin: 5px 0 15px 0; /* Adjust margin */
     font-size: 16px;
-    border: 1.5px solid #ccc;
-    border-radius: 5px;
+    color: #ffffff; /* White text input */
+    border-radius: 8px; /* More rounded */
     transition: all 0.3s ease-in-out;
 }
-
-
-input[type="text"]:focus, select:focus {
-    border-color: #0056b3;
-    background-color: #e6f0ff;
-    outline: none;
-    box-shadow: 0 0 8px rgba(0, 86, 179, 0.5);
+input[type="text"]::placeholder, input[type="password"]::placeholder, select::placeholder { /* Added input[type="password"] */
+    color: rgba(255, 255, 255, 0.6);
 }
 
+input[type="text"]:focus, input[type="password"]:focus, select:focus { /* Added input[type="password"] */
+    border-color: rgba(255, 255, 255, 0.5); /* White border on focus */
+    background-color: rgba(255, 255, 255, 0.2); /* Slightly less transparent */
+    outline: none;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1); /* Subtle white glow */
+}
 
+/* Style buttons to match */
 button {
-    background-color: #0056b3;
-    color: white;
-    padding: 12px 18px;
+    background-color: rgba(255, 255, 255, 0.15); /* Semi-transparent */
+    color: #ffffff; /* White text */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 12px 25px; /* Adjust padding */
     font-size: 16px;
-    font-weight: 500; /* Merged font-weight from later definition */
-    border: none;
-    border-radius: 6px;
+    font-weight: 600;
+    border-radius: 8px;
     cursor: pointer;
-    margin-top: 12px;
-    transition: background 0.3s ease;
+    margin-top: 25px; /* Increased space above button */
+    transition: all 0.3s ease;
+    display: block; /* Make button block */
+    width: 100%; /* Full width */
 }
 
 button:hover {
-    background-color: #003d80;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
-
 
 #video, #capturedPhoto {
     width: 100%;
     max-width: 340px;
-    border: 3px solid #0056b3;
-    border-radius: 6px;
+    border: 2px solid rgba(255, 255, 255, 0.2); /* Match border style */
+    border-radius: 8px;
     margin: 12px 0;
 }
 
-
+/* Adjust link colors */
 a {
     display: inline-block;
     margin-top: 18px;
-    font-size: 18px;
-    color: #0056b3;
+    font-size: 16px; /* Slightly smaller */
+    color: #a8d5ff; /* Light blue */
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 500;
+    /* text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); */ /* Remove shadow if not needed */
 }
 
 a:hover {
     text-decoration: underline;
+    color: #ffffff;
 }
-
-/* Removed misplaced comment */
 
 .login-container {
-    max-width: 350px; /* Use max-width instead of fixed width */
-    width: 90%; /* Allow shrinking */
-    margin-left: auto; /* Center the container */
-    margin-right: auto; /* Center the container */
+    /* If login uses glass-container, this might not be needed */
+    /* Or style it similarly to glass-container if it's separate */
+    max-width: 400px;
+    width: 90%;
+    margin: 20px auto;
     text-align: center;
+    /* Apply glass effect directly if needed */
+    /* background: rgba(255, 255, 255, 0.08); ... etc */
 }
 
-/* Removed redundant h1 and button definitions */
 
 #admin-password {
     transition: all 0.3s ease-in-out;

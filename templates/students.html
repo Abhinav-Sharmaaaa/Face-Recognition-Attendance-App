@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
     <style>
         /* Add some basic styling for the search input and dropdown */
         #searchInput, #branchSelect {
@@ -34,7 +35,7 @@
         <option value="Pharmacy">Pharmacy</option>
     </select>
 
-    <div class="container">
+    <div class="container glass-container">
         <table id="studentsTable" data-sort-order="asc">
             <thead>
                 <tr>

@@ -8,9 +8,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Correctly link the stylesheet using url_for -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Link to the glass theme stylesheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
 </head>
 <body>
-    <div class="container">
+    <div class="container glass-container">
         <img src="https://img.freepik.com/free-vector/man-face-scan-biometric-digital-technology_24908-56401.jpg" alt="Logo" class="logo">
         <h1 class="welcome-text">Welcome to FaceAttend</h1>
         <p class="sub-text">Please select an option to proceed</p>
