@@ -96,6 +96,7 @@
         {% endwith %}
 
         <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Dashboard</a>
+        <a href="{{ url_for('export_attendance_excel') }}" class="back-link" style="margin-left: 10px;">Export to Excel</a>
 
         {% if attendance_records %}
             <table class="attendance-table">
