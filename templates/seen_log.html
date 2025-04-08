@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seen Log</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}"> <!-- Added glass theme -->
     <style>
         .attendance-button {
             position: absolute;
@@ -129,7 +130,7 @@
         }
     </style>
 </head>
-<body>
+<body class="glass-container"> <!-- Added glass-container class -->
     <button id="getAttendanceBtn" class="attendance-button">Get Attendance</button>
     <h1>Face Sighting Log</h1>
 

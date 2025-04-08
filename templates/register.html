@@ -4,9 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register User</title>
-    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
 </head>
-<body>
+<body data-theme="light"> <!-- Add data-theme attribute -->
+    <div class="container glass-container">
+        <!-- Theme Toggle Switch -->
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+            <em>Toggle Theme</em>
+        </div>
+        <!-- End Theme Toggle Switch -->
     <h1>Register a User</h1>
     <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
         Role:
@@ -108,6 +119,35 @@
         roleSelect.addEventListener('change', toggleBranchField);
         // --- End of added JavaScript ---
 
+
+        // Theme switching logic
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+
+        if (currentTheme) {
+            document.body.setAttribute('data-theme', currentTheme);
+
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        } else {
+            // Default to light theme if no preference is stored
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark'); // Save theme preference
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light'); // Save theme preference
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
+    </div>
 </body>
 </html>

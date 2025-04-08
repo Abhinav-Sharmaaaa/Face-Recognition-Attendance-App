@@ -6,6 +6,7 @@ from collections import defaultdict # Import defaultdict for easier grouping
 import cv2
 import numpy as np
 import io
+from io import BytesIO # Added for Excel export
 import logging
 from dotenv import load_dotenv
 from flask_pymongo import PyMongo
@@ -15,6 +16,7 @@ from scipy.spatial.distance import cosine
 from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId # Added for MongoDB ID handling
 import json # Added for configuration
+import openpyxl # Added for Excel export
 
 load_dotenv()
 
@@ -1205,6 +1207,103 @@ def attendance_page():
         logging.error(f"Error generating attendance page: {e}")
         flash("Error loading attendance data.", "error")
         return render_template('attendance.html', attendance_records=[]), 500
+
+@app.route('/export_attendance_excel')
+def export_attendance_excel():
+    """ Exports the current day's attendance data to an Excel file. """
+    if session.get('user_type') != 'admin':
+        flash("Unauthorized access.", "warning")
+        return redirect(url_for('login'))
+
+    try:
+        india_tz = pytz.timezone('Asia/Kolkata')
+        now_india = datetime.now(india_tz)
+        start_of_day = india_tz.localize(datetime.combine(now_india.date(), time.min))
+        end_of_day = india_tz.localize(datetime.combine(now_india.date(), time.max))
+        current_date_str = now_india.strftime('%Y-%m-%d')
+
+        logging.info(f"Fetching attendance logs for Excel export between {start_of_day} and {end_of_day}")
+
+        # --- Fetch Data (Similar to attendance_page) ---
+        log_records_cursor = mongo.db.seen_log.find({
+            'type': 'known_sighting',
+            'timestamp': {
+                '$gte': start_of_day,
+                '$lte': end_of_day
+            }
+        }).sort('timestamp', 1)
+
+        attendance_data = defaultdict(lambda: {'timestamps': []})
+        user_details = {}
+        known_users = list(mongo.db.students.find({}, {"name": 1, "branch": 1, "role": 1}))
+        for user in known_users:
+            user_details[user['name']] = {'branch': user.get('branch', 'N/A'), 'role': user.get('role', 'N/A')}
+
+        for record in log_records_cursor:
+            name = record.get('name')
+            timestamp = record.get('timestamp')
+            if name and timestamp:
+                if timestamp.tzinfo is None: timestamp = india_tz.localize(timestamp)
+                else: timestamp = timestamp.astimezone(india_tz)
+                attendance_data[name]['timestamps'].append(timestamp)
+
+        final_attendance = []
+        for name, data in attendance_data.items():
+            if data['timestamps']:
+                timestamps = sorted(data['timestamps'])
+                arriving_time = timestamps[0]
+                leaving_time = timestamps[-1] if len(timestamps) > 1 else arriving_time
+                details = user_details.get(name, {'branch': 'N/A', 'role': 'N/A'})
+                final_attendance.append({
+                    'name': name,
+                    'branch': details['branch'],
+                    'role': details['role'],
+                    'arriving_time': arriving_time.strftime('%H:%M:%S'),
+                    'leaving_time': leaving_time.strftime('%H:%M:%S'),
+                    'date': arriving_time.strftime('%Y-%m-%d')
+                })
+        final_attendance.sort(key=lambda x: x['name'])
+        # --- End Fetch Data ---
+
+        # --- Create Excel Workbook ---
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        sheet.title = f"Attendance {current_date_str}"
+
+        # Add Headers
+        headers = ["Name", "Branch", "Role", "Arriving Time", "Leaving Time", "Date"]
+        sheet.append(headers)
+
+        # Add Data Rows
+        for record in final_attendance:
+            sheet.append([
+                record['name'],
+                record['branch'],
+                record['role'],
+                record['arriving_time'],
+                record['leaving_time'],
+                record['date']
+            ])
+
+        # --- Save to Memory ---
+        excel_stream = BytesIO()
+        workbook.save(excel_stream)
+        excel_stream.seek(0) # Rewind the stream to the beginning
+
+        logging.info(f"Generated Excel export for {len(final_attendance)} records for date {current_date_str}.")
+
+        # --- Return Response ---
+        return Response(
+            excel_stream,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            headers={'Content-Disposition': f'attachment;filename=attendance_{current_date_str}.xlsx'}
+        )
+
+    except Exception as e:
+        logging.error(f"Error generating Excel export: {e}")
+        flash("Error generating Excel export.", "error")
+        # Redirect back to attendance page on error
+        return redirect(url_for('attendance_page'))
 
 
 if __name__ == '__main__':

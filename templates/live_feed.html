@@ -2,41 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Live Feed</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
+    /* Keep some specific styles if needed, remove conflicting ones */
     body {
-      font-family: 'Poppins', sans-serif;
-      height: 100vh;
-      background: linear-gradient(-20deg, #d0e7ff, #f0f8ff, #cceeff, #ffffff);
-      background-size: 400% 400%;
-      animation: gradientBG 15s ease infinite;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-    }
-
-    @keyframes gradientBG {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
+        font-family: 'Poppins', sans-serif;
+        /* Removed gradient background, glass_theme handles it */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh; /* Ensure body takes full height */
+        flex-direction: column; /* Keep column layout */
+        padding: 20px; /* Add some padding */
     }
 
     h1.live-feed-text {
-      font-size: 3rem;
-      color: #005baa;
+      font-size: 2.5rem; /* Adjusted size */
+      color: #333; /* Adjusted color for better contrast on glass */
       margin-bottom: 30px;
       font-weight: 600;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
       position: relative;
+      text-align: center; /* Center heading */
     }
 
     h1.live-feed-text::after {
@@ -45,43 +37,94 @@
       left: 50%;
       bottom: -10px;
       transform: translateX(-50%);
-      height: 4px;
-      width: 60px;
-      background-color: #0077cc;
+      height: 3px; /* Adjusted thickness */
+      width: 50px; /* Adjusted width */
+      background-color: #007bff; /* Bootstrap primary color */
       border-radius: 2px;
     }
 
     .video-wrapper {
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 15px 30px rgba(0, 123, 255, 0.25);
-      border: 5px solid #0077cc;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .video-wrapper:hover {
-      transform: scale(1.02);
-      box-shadow: 0 20px 40px rgba(0, 123, 255, 0.3);
+      /* Removed custom border, shadow, hover - glass-container handles appearance */
+      border-radius: 15px; /* Keep rounded corners */
+      overflow: hidden; /* Keep overflow hidden */
+      margin-top: 20px; /* Add some margin */
+      max-width: 100%; /* Ensure responsiveness */
     }
 
     img {
       display: block;
-      width: 640px;
-      height: 480px;
+      /* Width/height might need adjustment based on container */
+      max-width: 100%;
+      height: auto; /* Maintain aspect ratio */
+      border-radius: 15px; /* Match wrapper radius */
     }
 
+    /* Keep media query for responsiveness */
     @media (max-width: 700px) {
-      img {
-        width: 90vw;
-        height: auto;
+      /* Adjustments for smaller screens if needed */
+      h1.live-feed-text {
+        font-size: 2rem;
       }
     }
   </style>
 </head>
-<body>
-  <h1 class="live-feed-text">Live Feed</h1>
-  <div class="video-wrapper">
-    <img src="{{ url_for('video_feed') }}" alt="Live video stream" />
-  </div>
+<body data-theme="light"> <!-- Add data-theme attribute -->
+    <div class="container glass-container">
+        <!-- Theme Toggle Switch -->
+        <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+            </label>
+            <em>Toggle Theme</em>
+        </div>
+        <!-- End Theme Toggle Switch -->
+    <h1 class="live-feed-text">Live Feed</h1>
+    <div class="video-wrapper">
+      <img src="{{ url_for('video_feed') }}" alt="Live video stream" />
+    </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Theme Switching Script -->
+    <script>
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        const bodyElement = document.body; // Use document.body
+
+        function setTheme(theme) {
+            bodyElement.setAttribute('data-theme', theme); // Set on body
+            localStorage.setItem('theme', theme);
+            if (theme === 'dark') {
+                toggleSwitch.checked = true;
+            } else {
+                toggleSwitch.checked = false;
+            }
+        }
+
+        if (currentTheme) {
+            setTheme(currentTheme);
+        } else {
+            // Default to light theme if no preference saved
+            setTheme('light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                setTheme('dark');
+            } else {
+                setTheme('light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+
+        // Ensure the toggle reflects the initial theme on load
+        if (currentTheme === 'dark') {
+            toggleSwitch.checked = true;
+        } else {
+            toggleSwitch.checked = false; // Ensure it's unchecked for light theme
+        }
+    </script>
+    <!-- End Theme Switching Script -->
 </body>
 </html>
