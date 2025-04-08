@@ -10,6 +10,7 @@
     <!-- Removed internal style block -->
 </head>
 <body> <!-- Removed glass-container from body -->
+    {% include 'sidebar.html' %}
     <!-- Removed outer container div -->
         <h1>Configure Settings</h1>
 
@@ -21,6 +22,7 @@
             </label>
             <em>Toggle Dark Mode</em> <!-- Removed inline style -->
         </div>
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
 
         <div class="glass-container"> <!-- Added glass container for main content -->
             {% with messages = get_flashed_messages(with_categories=true) %}

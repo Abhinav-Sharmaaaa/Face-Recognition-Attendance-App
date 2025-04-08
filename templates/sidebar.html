@@ -1,0 +1,23 @@
+<div id="sidebar" class="sidebar collapsed">
+    <button id="sidebarToggle" style="background:none;border:none;color:var(--glass-text);font-size:20px;cursor:pointer;margin-bottom:15px;">☰</button>
+    <h3>Navigation</h3>
+    <ul>
+        <li><a href="/dashboard" class="{% if request.path == '/index' %}active{% endif %}"><i class="fas fa-home icon-expanded"></i><i class="fas fa-home icon-collapsed"></i> <span>Dashboard</span></a></li>
+        <li><a href="/attendance" class="{% if request.path == '/attendance' %}active{% endif %}"><i class="fas fa-calendar-check icon-expanded"></i><i class="fas fa-calendar icon-collapsed"></i> <span>Attendance</span></a></li>
+        <li><a href="/view_students" class="{% if request.path == '/students' %}active{% endif %}"><i class="fas fa-users icon-expanded"></i><i class="fas fa-user icon-collapsed"></i> <span>Students</span></a></li>
+        <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class="fas fa-cog icon-expanded"></i><i class="fas fa-wrench icon-collapsed"></i> <span>Configure</span></a></li>
+        <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class="fas fa-video icon-expanded"></i><i class="fas fa-play icon-collapsed"></i> <span>Live Feed</span></a></li>
+        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class="fas fa-clipboard-list icon-expanded"></i><i class="fas fa-list icon-collapsed"></i> <span>Seen Log</span></a></li>
+        <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class="fas fa-sign-out-alt icon-expanded"></i><i class="fas fa-times icon-collapsed"></i> <span>Logout</span></a></li>
+    </ul>
+</div>
+
+<script>
+document.getElementById('sidebarToggle').onclick = function() {
+    document.getElementById('sidebar').classList.toggle('collapsed');
+    document.querySelector('.main-content').classList.toggle('expanded');
+};
+</script>
+<div class="main-content">
+    <!-- Main content starts here -->
+</div>

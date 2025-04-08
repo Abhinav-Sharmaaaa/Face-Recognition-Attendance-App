@@ -68,6 +68,7 @@
   </style>
 </head>
 <body data-theme="light"> <!-- Add data-theme attribute -->
+    {% include 'sidebar.html' %}
     <div class="container glass-container">
         <!-- Theme Toggle Switch -->
         <div class="theme-switch-wrapper">
@@ -77,6 +78,7 @@
             </label>
             <em>Toggle Theme</em>
         </div>
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
         <!-- End Theme Toggle Switch -->
     <h1 class="live-feed-text">Live Feed</h1>
     <div class="video-wrapper">

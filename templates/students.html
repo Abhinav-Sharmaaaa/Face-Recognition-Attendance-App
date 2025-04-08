@@ -19,46 +19,78 @@
     </style>
 </head>
 <body>
-    <h1>Registered Students</h1>
-    
-    <input type="text" id="searchInput" placeholder="Search for names or branches..">
-    
-    <select id="branchSelect">
-        <option value="">All Branches</option>
-        <option value="C.S.E.">C.S.E.</option>
-        <option value="I.T.">I.T.</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Mechanical">Mechanical</option>
-        <option value="Automobile">Automobile</option>
-        <option value="Civil">Civil</option>
-        <option value="Pharmacy">Pharmacy</option>
-    </select>
+    <div class="wrapper" style="display: flex;">
+        <div class="sidebar">
+            <h2>Menu</h2>
+            <a href="/register">
+                <img src="https://cdn-icons-png.flaticon.com/128/456/456212.png" alt="Register Icon">
+                Register Student
+            </a>
+            <a href="/view_students">
+                <img src="https://cdn-icons-png.flaticon.com/128/9428/9428917.png" alt="Students Icon">
+                View Students
+            </a>
+            <a href="/attendance">
+                <img src="https://cdn-icons-png.flaticon.com/128/1055/1055644.png" alt="Attendance Icon">
+                View Attendance
+            </a>
+            <a href="/live_feed">
+                <img src="https://cdn-icons-png.flaticon.com/128/2921/2921222.png" alt="Live Feed Icon">
+                Live Feed
+            </a>
+            <a href="/seen_log">
+                <img src="https://cdn-icons-png.flaticon.com/128/159/159604.png" alt="Log Icon">
+                Seen Log
+            </a>
+            <a href="/configure">
+                <img src="https://cdn-icons-png.flaticon.com/128/126/126472.png" alt="Configure Icon">
+                Configure
+            </a>
+            <a href="/logout" class="btn btn-danger">Logout</a>
+        </div>
+        <div class="content-area" style="flex:1; padding: 20px;">
+            <h1>Registered Students</h1>
+            
+            <input type="text" id="searchInput" placeholder="Search for names or branches..">
+            
+            <select id="branchSelect">
+                <option value="">All Branches</option>
+                <option value="C.S.E.">C.S.E.</option>
+                <option value="I.T.">I.T.</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Automobile">Automobile</option>
+                <option value="Civil">Civil</option>
+                <option value="Pharmacy">Pharmacy</option>
+            </select>
 
-    <div class="container glass-container">
-        <table id="studentsTable" data-sort-order="asc">
-            <thead>
-                <tr>
-                    <th class="sortable" onclick="sortTable(0)">Name</th>
-                    <th class="sortable" onclick="sortTable(1)">Branch</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
-                <tr>
-                    <td>{{ student.name }}</td>
-                    <td>{{ student.branch }}</td>
-                    <td>
-                        <form action="{{ url_for('remove_student', name=student.name) }}" method="post" style="display:inline;" onsubmit="return confirmDelete(event, '{{ student.name }}');">
-                            <button class="delete-button" type="submit">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+            <div class="container glass-container">
+                <table id="studentsTable" data-sort-order="asc">
+                    <thead>
+                        <tr>
+                            <th class="sortable" onclick="sortTable(0)">Name</th>
+                            <th class="sortable" onclick="sortTable(1)">Branch</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student in students %}
+                        <tr>
+                            <td>{{ student.name }}</td>
+                            <td>{{ student.branch }}</td>
+                            <td>
+                                <form action="{{ url_for('remove_student', name=student.name) }}" method="post" style="display:inline;" onsubmit="return confirmDelete(event, '{{ student.name }}');">
+                                    <button class="delete-button" type="submit">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <a href="/">Back to Home</a>
+        </div>
     </div>
-    <a href="/">Back to Home</a>
 
     <script>
         function confirmDelete(event, name) {

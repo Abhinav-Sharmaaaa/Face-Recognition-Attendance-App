@@ -8,6 +8,7 @@
     <!-- Removed inline styles, now using glass_theme.css and styles.css -->
 </head>
 <body data-theme="light"> <!-- Added data-theme attribute -->
+    {% include 'sidebar.html' %}
     <div class="container glass-container"> <!-- Added glass-container class -->
         <!-- Theme Toggle Switch -->
         <div class="theme-switch-wrapper">
@@ -17,6 +18,7 @@
             </label>
             <em>Toggle Theme</em>
         </div>
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
         <!-- End Theme Toggle Switch -->
         <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
 

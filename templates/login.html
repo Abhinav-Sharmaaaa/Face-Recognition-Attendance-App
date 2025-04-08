@@ -23,7 +23,7 @@
             </label>
             <em>Enable Dark Mode!</em>
         </div>
-        <img src="https://png.pngtree.com/png-vector/20191120/ourmid/pngtree-biometrics-face-recognition-icon-on-gray-background-png-image_2007585.jpg" alt="Logo">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
         <h2>Admin Login</h2>
          <!-- The form styles from styles.css will apply -->
          <form method="POST" action="/login" id="admin-login-form">

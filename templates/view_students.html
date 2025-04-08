@@ -8,13 +8,14 @@
     <!-- Removed internal style block -->
 </head>
 <body data-theme="light">
+    {% include 'sidebar.html' %}
     <div class="theme-switch-wrapper">
         <label class="theme-switch" for="checkbox">
             <input type="checkbox" id="checkbox" />
             <div class="slider round"></div>
         </label>
     </div>
-    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="site-logo">
+    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
     <div class="glass-container">
         <h1>View Students</h1>
 
