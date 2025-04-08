@@ -5,143 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seen Log</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}"> <!-- Added glass theme -->
-    <style>
-        .attendance-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 10px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .attendance-button:hover {
-            background-color: #0056b3;
-        }
-        #attendance-list {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            display: none; /* Hidden by default */
-        }
-        #attendance-list h2 {
-            margin-top: 0;
-            color: #333;
-        }
-        #attendance-list ul {
-            list-style: none;
-            padding: 0;
-        }
-        #attendance-list li {
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        #attendance-list li:last-child {
-            border-bottom: none;
-        }
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-        th {
-            background-color: #4CAF50;
-            color: white;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        tr:hover {
-            background-color: #f1f1f1;
-        }
-        .log-image {
-            max-width: 100px;
-            max-height: 100px;
-            display: block; /* Prevents extra space below image */
-        }
-        .back-link {
-            display: block;
-            margin-top: 20px;
-            text-align: center;
-            text-decoration: none;
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        .back-link:hover {
-            text-decoration: underline;
-        }
-        /* Styles for dropdown */
-        details > summary {
-            cursor: pointer;
-            padding: 8px;
-            background-color: #eee;
-            border-radius: 4px;
-            margin: 5px 0;
-        }
-        details > summary:hover {
-            background-color: #ddd;
-        }
-        details[open] > summary {
-            background-color: #ccc;
-        }
-        .nested-log-table {
-            width: calc(100% - 20px); /* Indent slightly */
-            margin-left: 20px;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            border-collapse: collapse;
-            background-color: #fdfdfd;
-        }
-        .nested-log-table th, .nested-log-table td {
-            border: 1px solid #eee;
-            padding: 8px;
-            font-size: 0.9em;
-        }
-        .nested-log-table th {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-        .log-image-nested {
-            max-width: 60px; /* Smaller image in dropdown */
-            max-height: 60px;
-            display: block;
-        }
-    </style>
+    <!-- Removed internal style block to rely on styles.css -->
 </head>
-<body class="glass-container"> <!-- Added glass-container class -->
-    <button id="getAttendanceBtn" class="attendance-button">Get Attendance</button>
-    <h1>Face Sighting Log</h1>
+<body data-theme="light">
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="site-logo">
+    <div class="content-wrapper glass-container">
+        <div class="header-section">
+            <h1>Face Sighting Log</h1>
+            <button id="getAttendanceBtn" class="action-button">Get Attendance</button>
+        </div>
 
-    <div id="attendance-list">
+    <div class="attendance-list">
         <h2>Attendance Report</h2>
         <ul id="attendance-data">
             <!-- Attendance data will be loaded here -->
         </ul>
     </div>
 
-    <table>
+    <table class="attendance-table"> <!-- Added theme class -->
         <thead>
             <tr>
                 <th>Type</th>
@@ -164,7 +51,7 @@
                             <td>{{ log.status_at_log }}</td>
                             <td>
                                 {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
-                                    <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face" class="log-image">
+                                    <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image class -->
                                 {% else %}
                                     N/A
                                 {% endif %}
@@ -180,7 +67,7 @@
                                         <!-- Displaying first log's type for context -->
                                         | Type: {{ log_list[0].type }}
                                     </summary>
-                                    <table class="nested-log-table">
+                                    <table class="attendance-table"> <!-- Use theme class for nested table -->
                                         <thead>
                                             <tr>
                                                 <th>Timestamp</th>
@@ -196,7 +83,7 @@
                                                 <td>{{ log.status_at_log }}</td>
                                                 <td>
                                                     {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
-                                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face" class="log-image-nested">
+                                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image-nested class -->
                                                     {% else %}
                                                         N/A
                                                     {% endif %}
@@ -213,7 +100,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="5" style="text-align: center;">No log entries found.</td>
+                    <td colspan="5">No log entries found.</td> <!-- Removed inline style -->
                 </tr>
             {% endif %}
 
@@ -227,7 +114,7 @@
                     <td>{{ log.status_at_log }}</td>
                     <td>
                         {% if log.face_image_base64 %}
-                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face" class="log-image">
+                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face"> <!-- Removed log-image class -->
                         {% else %}
                             No Image
                         {% endif %}
@@ -240,8 +127,8 @@
         </tbody>
     </table>
 
-    <form action="{{ url_for('reset_seen_log') }}" method="post" style="text-align: center; margin-top: 20px;">
-        <button type="submit" onclick="return confirm('Are you sure you want to reset all seen logs? This action cannot be undone.');" style="padding: 10px 20px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">
+    <form action="{{ url_for('reset_seen_log') }}" method="post" class="reset-form">
+        <button type="submit" class="action-button danger" onclick="return confirm('Are you sure you want to reset all seen logs? This action cannot be undone.');">
             Reset Logs
         </button>
     </form>
@@ -276,7 +163,7 @@
                 .then(data => {
                     attendanceDataUl.innerHTML = ''; // Clear loading message/previous results
                     if (data.error) { // Check for application-level errors returned in JSON
-                        attendanceDataUl.innerHTML = `<li class="text-danger">Error: ${data.error}</li>`; // Use a class for styling errors
+                        attendanceDataUl.innerHTML = `<li>Error: ${data.error}</li>`; // Removed text-danger class
                     } else if (!data || data.length === 0) { // Check if data is null or empty array
                         attendanceDataUl.innerHTML = '<li>No attendance data found for today.</li>';
                     } else {
@@ -297,7 +184,7 @@
                 .catch(error => {
                     console.error('Error fetching attendance:', error);
                     // Display a user-friendly error message
-                    attendanceDataUl.innerHTML = `<li class="text-danger">Error fetching attendance data: ${error.message}. Please check the console for details.</li>`;
+                    attendanceDataUl.innerHTML = `<li>Error fetching attendance data: ${error.message}. Please check the console for details.</li>`; // Removed text-danger class
                 })
                 .finally(() => {
                     // Re-enable button and restore text regardless of success or failure
@@ -305,6 +192,34 @@
                     button.textContent = 'Get Attendance';
                 });
         });
+    </script>
+    </div>
+    <script>
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+
+        if (currentTheme) {
+            document.body.setAttribute('data-theme', currentTheme);
+
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
 </body>
 </html>

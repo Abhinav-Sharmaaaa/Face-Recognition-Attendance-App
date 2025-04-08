@@ -9,7 +9,6 @@
     <!-- Correctly link the stylesheet using url_for -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <!-- Link to the glass theme stylesheet -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='glass_theme.css') }}">
 </head>
 <body data-theme="light"> <!-- Add data-theme attribute -->
     <div class="container glass-container">
@@ -22,7 +21,7 @@
             <em>Toggle Theme</em>
         </div>
         <!-- End Theme Toggle Switch -->
-        <img src="https://img.freepik.com/free-vector/man-face-scan-biometric-digital-technology_24908-56401.jpg" alt="Logo" class="logo">
+        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
         <h1 class="welcome-text">Welcome to SecureVision</h1>
         <p class="sub-text">Please select an option to proceed</p>
         <div class="button-container" id="admin-features">

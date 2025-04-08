@@ -45,18 +45,27 @@
     --glass-specific-button-hover-bg: rgba(120, 120, 170, 0.4);
 }
 
-body.light-theme {
+body[data-theme="light"] {
     --background-start: #ece9e6; /* Light gradient start */
     --background-end: #ffffff;   /* Light gradient end */
     --background-color: #f4f4f4; /* Simple light fallback */
     --text-color: #333;          /* Default light theme text */
     --light-text-color: #333;    /* Darker text for light backgrounds */
-    --glass-bg: rgba(255, 255, 255, 0.7); /* Less transparent glass */
-    --glass-border: rgba(200, 200, 200, 0.5);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2); /* Lighter shadow */
+
+    /* Enhanced glassmorphism for light mode */
+    --glass-bg: rgba(255, 255, 255, 0.25); /* Slightly less transparent for more depth */
+    --glass-border: rgba(180, 180, 180, 0.4); /* Darker border for contrast */
+    --glass-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2), 0 8px 32px rgba(31, 38, 135, 0.15); /* Add subtle inner shadow + soft outer shadow */
     --glass-text: #333;
     --glass-link: #007bff;
     --glass-link-hover: #0056b3;
+
+    .site-logo {
+        max-height: 80px;
+        display: block;
+        margin: 15px auto;
+    }
+
     --input-bg: #ffffff;
     --input-border: #ced4da;
     --input-focus-border: #80bdff;
@@ -75,9 +84,9 @@ body.light-theme {
     --body-bg-image: linear-gradient(to right, var(--background-start), var(--background-end)); /* Light theme gradient */
 
     /* Specific Glass Theme Variables - Light */
-    --glass-specific-bg: rgba(255, 255, 255, 0.8); /* Lighter, clearer glass */
-    --glass-specific-border: rgba(200, 200, 200, 0.6);
-    --glass-specific-shadow: 0 6px 20px rgba(0, 0, 0, 0.1); /* Softer shadow */
+    --glass-specific-bg: rgba(255, 255, 255, 0.25); /* Match general glass background */
+    --glass-specific-border: rgba(180, 180, 180, 0.4);
+    --glass-specific-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.2), 0 6px 20px rgba(0, 0, 0, 0.1);
     --glass-specific-text: #212529; /* Darker text for readability */
     --glass-specific-link: #0056b3;
     --glass-specific-link-hover: #003d80;
@@ -88,6 +97,25 @@ body.light-theme {
     --glass-specific-button-border: #ced4da;
     --glass-specific-button-text: #212529;
     --glass-specific-button-hover-bg: #dee2e6;
+
+    /* Force high contrast button styles in light mode */
+    button,
+    .btn-option,
+    .action-link,
+    .back-link {
+        background-color: #007bff !important;
+        color: #ffffff !important;
+        border-color: #007bff !important;
+    }
+
+    button:hover,
+    .btn-option:hover,
+    .action-link:hover,
+    .back-link:hover {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+        color: #ffffff !important;
+    }
 }
 
 /* Theme Toggle Switch Styles */
@@ -140,7 +168,7 @@ input:checked + .slider {
     background-color: #663399; /* A purple color, adjust as needed */
 }
 
-body.light-theme input:checked + .slider {
+body[data-theme="light"] input:checked + .slider {
     background-color: #007bff; /* Blue for light theme */
 }
 
@@ -155,7 +183,7 @@ input:checked + .slider:before {
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* Add shadow for visibility */
 }
 
-body.light-theme .theme-switch-wrapper span {
+body[data-theme="light"] .theme-switch-wrapper span {
     text-shadow: none; /* Remove shadow in light mode if not needed */
 }
 
@@ -253,7 +281,7 @@ body {
 
 /* Logo styling might need adjustment based on theme, but keep simple for now */
 .logo {
-    width: 150px;
+    width: 250px;
     margin-bottom: 20px;
     border-radius: 10px;
     /* Shadow might look odd in light theme, consider removing or adjusting */
@@ -450,3 +478,253 @@ a:hover {
 .d-none {
     display: none;
 }
+
+/* --- Refactored Styles from glass_theme.css --- */
+
+/* Attendance Table */
+.attendance-table {
+    width: 100%;
+    margin: 20px 0;
+    border-collapse: collapse;
+    background: var(--glass-bg); /* Use theme variable */
+    backdrop-filter: blur(10px); /* Consistent blur */
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 15px; /* Match other elements */
+    border: 1px solid var(--glass-border); /* Use theme variable */
+    box-shadow: var(--glass-shadow); /* Use theme variable */
+    overflow: hidden; /* Keep rounded corners */
+}
+
+.attendance-table th, .attendance-table td {
+    border: 1px solid var(--glass-border); /* Use theme variable */
+    padding: 12px 15px;
+    text-align: left;
+    color: var(--glass-text); /* Use theme variable */
+}
+
+.attendance-table th {
+    background-color: rgba(255, 255, 255, 0.1); /* Keep slightly lighter header for contrast */
+    color: var(--glass-text); /* Use theme variable */
+    font-weight: 600;
+}
+
+.attendance-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.1); /* Keep subtle hover */
+}
+
+/* Flash Messages */
+.flash-messages {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.flash-messages li {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border); /* Use theme variable */
+    color: var(--glass-text); /* Use theme variable */
+    background: var(--glass-bg); /* Use theme variable */
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific flash message colors need careful handling with themes */
+/* Option 1: Keep distinct colors (might clash with light theme) */
+.flash-success {
+    background-color: rgba(40, 167, 69, 0.2);
+    border-color: rgba(40, 167, 69, 0.3);
+    color: #d4edda;
+}
+body[data-theme="light"] .flash-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.flash-error {
+    background-color: rgba(220, 53, 69, 0.2);
+    border-color: rgba(220, 53, 69, 0.3);
+    color: #f8d7da;
+}
+body[data-theme="light"] .flash-error {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+/* Option 2: Use theme colors (less distinct success/error) */
+/*
+.flash-success { border-left: 5px solid green; }
+.flash-error { border-left: 5px solid red; }
+*/
+
+
+/* Back Link */
+.back-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: var(--button-bg); /* Use theme variable */
+    color: var(--button-text); /* Use theme variable */
+    text-decoration: none;
+    border-radius: 8px;
+    border: 1px solid var(--button-border); /* Use theme variable */
+    font-weight: 500;
+    /* transition is global */
+}
+
+.back-link:hover {
+    background-color: var(--button-hover-bg); /* Use theme variable */
+    border-color: var(--button-hover-border); /* Use theme variable */
+    color: var(--button-text); /* Ensure text color remains consistent on hover */
+    text-decoration: none; /* Remove underline from general 'a:hover' */
+}
+
+/* --- End Refactored Styles --- */
+
+
+/* --- Configure Page Form Enhancements --- */
+
+/* Add spacing between form groups */
+.glass-container form > div {
+    margin-bottom: 1.5rem; /* Add space below each form group div */
+}
+
+/* Style for the help text divs */
+.glass-container form > div > div > div { /* Target the div containing help text */
+    font-size: 0.85em;
+    color: var(--glass-text); /* Use glass text color */
+    opacity: 0.8;
+    margin-top: 0.4rem;
+}
+
+/* Style number and time inputs similarly to text inputs */
+.glass-container input[type="number"],
+.glass-container input[type="time"] {
+    width: 100%; /* Make them full width */
+    padding: 12px 15px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    margin: 5px 0 5px 0; /* Adjusted margin */
+    font-size: 16px;
+    color: var(--input-text);
+    border-radius: 8px;
+    transition: border-color var(--transition-speed) ease, background-color var(--transition-speed) ease;
+    box-sizing: border-box; /* Ensure padding is included in width */
+}
+.glass-container input[type="number"]:focus,
+.glass-container input[type="time"]:focus {
+    border-color: var(--input-focus-border);
+    background-color: var(--input-focus-bg);
+    outline: none;
+    box-shadow: 0 0 8px rgba(128, 189, 255, 0.3);
+}
+
+/* Improve checkbox and label alignment */
+.glass-container form > div:has(input[type="checkbox"]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem; /* Space between checkbox and label */
+}
+.glass-container form > div:has(input[type="checkbox"]) input[type="checkbox"] {
+    width: auto; /* Don't force checkbox to full width */
+    margin: 0; /* Remove default margins */
+    flex-shrink: 0; /* Prevent checkbox from shrinking */
+}
+.glass-container form > div:has(input[type="checkbox"]) label {
+    margin: 0; /* Remove default margins from label */
+    font-weight: normal; /* Make label less bold */
+}
+
+/* Style the horizontal rules */
+.glass-container hr {
+    border: none;
+    height: 1px;
+    background-color: var(--glass-border); /* Use theme border color */
+    margin: 1.5rem 0; /* Add vertical spacing */
+}
+
+/* Style the back link container */
+.glass-container > div:has(a[href*="index"]) {
+    text-align: center; /* Center the link */
+    margin-top: 1.5rem; /* Add space above the link */
+}
+/* View Students Page Fixes */
+
+/* Flash messages inside container */
+.flash-messages > .flash {
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    color: var(--glass-text);
+}
+
+/* Filter/search container */
+.filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: space-between;
+    margin: 20px 0;
+}
+.filter-container > form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    width: 100%;
+}
+.filter-container form > div {
+    flex: 1 1 150px;
+    min-width: 150px;
+}
+
+/* Action links styled as buttons */
+.action-link {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: var(--button-bg);
+    color: var(--button-text);
+    border: 1px solid var(--button-border);
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    margin: 10px 5px 0 0;
+    transition: background-color var(--transition-speed), border-color var(--transition-speed);
+}
+.action-link:hover {
+    background-color: var(--button-hover-bg);
+    border-color: var(--button-hover-border);
+    color: var(--button-text);
+    text-decoration: none;
+}
+
+/* No students message */
+.no-students {
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-align: center;
+    margin: 30px 0;
+    color: var(--glass-text);
+    opacity: 0.8;
+}
+
+/* Sort arrow styling */
+.sort-arrow {
+    font-size: 0.9em;
+    margin-left: 5px;
+    opacity: 0.7;
+}
+.sort-arrow::after {
+    content: '';
+}
+
+

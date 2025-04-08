@@ -5,155 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <style>
-        /* Styles copied from your provided code */
-        .search-sort-container {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 5px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
-        }
-        .search-sort-container label {
-            font-weight: bold;
-            margin-right: 5px;
-        }
-        .search-sort-container input[type="text"],
-        .search-sort-container select {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .search-sort-container button {
-            padding: 8px 15px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .search-sort-container button:hover {
-            background-color: #0056b3;
-        }
-         /* Clear Filters Link Style (if needed) */
-        .search-sort-container a.button-link {
-            padding: 8px 15px;
-            background-color: #6c757d; /* Example secondary color */
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-            font-size: inherit; /* Match button font size */
-            line-height: inherit; /* Match button line height */
-            border: none;
-            margin-left: 10px; /* Keep margin */
-            display: inline-block; /* Align properly with button */
-        }
-        .search-sort-container a.button-link:hover {
-             background-color: #5a6268;
-        }
-
-        .action-buttons-container { /* Container for Register/Dashboard buttons */
-             margin-bottom: 20px; /* Add space below these buttons */
-        }
-        .action-buttons-container .button-link { /* Style for Register/Dashboard */
-             margin-right: 10px;
-             padding: 8px 15px;
-             background-color: #28a745; /* Example Green */
-             color: white;
-             text-decoration: none;
-             border-radius: 4px;
-        }
-         .action-buttons-container .button-link:last-child {
-             background-color: #17a2b8; /* Example Info Blue */
-         }
-
-        .student-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        .student-table th, .student-table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: left;
-            vertical-align: middle; /* Align content vertically */
-        }
-        .student-table th {
-            background-color: #f2f2f2;
-            /* cursor: pointer; */ /* Removed cursor pointer from non-sorting headers */
-        }
-        .student-table th a { /* Style only applies to sorting links now */
-            text-decoration: none;
-            color: inherit; /* Inherit color from th */
-            display: block; /* Make the whole header clickable */
-            cursor: pointer; /* Add pointer cursor specifically to links */
-        }
-        .student-table th .sort-arrow {
-            font-size: 0.8em;
-            margin-left: 5px;
-            display: inline-block; /* Keep arrow beside text */
-        }
-        .student-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .student-table tr:hover {
-            background-color: #f1f1f1;
-        }
-        /* Ensure actions column buttons fit */
-        .student-table td.actions {
-             white-space: nowrap; /* Prevent wrapping of buttons */
-        }
-        .actions a, .actions button {
-            margin-right: 5px;
-            padding: 5px 10px;
-            text-decoration: none;
-            border-radius: 3px;
-            font-size: 0.9em;
-             display: inline-block; /* Better alignment */
-             vertical-align: middle; /* Align buttons nicely */
-        }
-         .actions form { /* Ensure form itself doesn't add extra space */
-             display: inline-block;
-             margin: 0;
-             padding: 0;
-             vertical-align: middle;
-         }
-        .actions .edit-btn {
-            background-color: #ffc107;
-            color: black;
-            border: none;
-        }
-        .actions .delete-btn {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .actions .delete-btn:hover {
-            background-color: #c82333;
-        }
-        .actions .edit-btn:hover {
-            background-color: #e0a800;
-        }
-        .no-students {
-            text-align: center;
-            padding: 20px;
-            color: #666;
-        }
-        /* Flash message styles (assuming basic ones exist in styles.css) */
-        .flash-messages { margin-bottom: 15px; }
-        .flash { padding: 10px; border-radius: 4px; margin-bottom: 10px; }
-        .flash.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .flash.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        /* Add other categories (info, warning) if needed */
-
-    </style>
+    <!-- Removed internal style block -->
 </head>
-<body>
-    <div class="container">
+<body data-theme="light">
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="site-logo">
+    <div class="glass-container">
         <h1>View Students</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -166,8 +28,8 @@
             {% endif %}
         {% endwith %}
 
-        <div class="search-sort-container">
-            <form method="GET" action="{{ url_for('view_students') }}" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; width: 100%;">
+        <div class="filter-container">
+            <form method="GET" action="{{ url_for('view_students') }}">
                 <div>
                     <label for="search">Search:</label>
                     <input type="text" id="search" name="search" value="{{ search_query or '' }}" placeholder="Name or Branch">
@@ -187,25 +49,25 @@
                         <option value="" {% if not branch_filter %}selected{% endif %}>All Branches</option>
                         {% for branch in distinct_branches %}
                             {# Check if branch is not None or empty before displaying #}
-                            {% if branch %} 
+                            {% if branch %}
                                 <option value="{{ branch }}" {% if branch_filter == branch %}selected{% endif %}>{{ branch }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>
                 </div>
 
-                <button type="submit">Apply Filters</button> {# Renamed button slightly #}
-                <a href="{{ url_for('view_students') }}" class="button-link">Clear Filters</a>
+                <button type="submit">Apply Filters</button>
+                <a href="{{ url_for('view_students') }}" class="action-link">Clear Filters</a>
             </form>
         </div>
 
-        <div class="action-buttons-container">
-            <a href="{{ url_for('register') }}" class="button-link">Register New Student</a>
-            <a href="{{ url_for('index') }}" class="button-link">Back to Dashboard</a>
+        <div>
+            <a href="{{ url_for('register') }}" class="action-link">Register New Student</a>
+            <a href="{{ url_for('index') }}" class="action-link">Back to Dashboard</a>
         </div>
 
         {% if students %}
-        <table class="student-table">
+        <table class="attendance-table">
             <thead>
                 <tr>
                     <th>
@@ -220,7 +82,7 @@
                     </th>
                     <th>
                         <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
-                            Registered At {% if sort_by == 'registered_at' or not sort_by %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %} {# Default sort indication #}
+                            Registered At {% if sort_by == 'registered_at' or not sort_by %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                         </a>
                     </th>
                      <th>
@@ -235,14 +97,12 @@
                 {% for student in students %}
                 <tr>
                     <td>{{ student.name }}</td>
-                    <td>{{ student.branch if student.branch else 'N/A' }}</td> {# Display N/A if branch is missing #}
+                    <td>{{ student.branch if student.branch else 'N/A' }}</td>
                     <td>{{ student.registered_at_str }}</td>
-                    {# FIX: Display 'Not Assigned' if role is missing/empty, otherwise capitalize it #}
                     <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
-                    <td class="actions">
-                        {# Ensure delete form is inline and confirmed #}
+                    <td>
                         <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
-                            <button type="submit" class="delete-btn">Delete</button>
+                            <button type="submit">Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -252,7 +112,33 @@
         {% else %}
         <p class="no-students">No students found matching your criteria.</p>
         {% endif %}
-
     </div>
+    <script>
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+
+        if (currentTheme) {
+            document.body.setAttribute('data-theme', currentTheme);
+
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+    </script>
 </body>
 </html>
