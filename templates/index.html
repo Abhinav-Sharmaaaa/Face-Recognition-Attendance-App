@@ -7,11 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Correctly link the stylesheet using url_for -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <!-- Link to the glass theme stylesheet -->
 </head>
 <body data-theme="light"> <!-- Add data-theme attribute -->
+    <div style="font-size:30px; color:red;">
+        <i class='bx bx-check-circle'></i> Boxicons Test Icon
+    </div>
     <div class="container glass-container">
         <!-- Theme Toggle Switch -->
         <div class="theme-switch-wrapper">

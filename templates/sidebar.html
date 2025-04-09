@@ -2,13 +2,13 @@
     <button id="sidebarToggle" style="background:none;border:none;color:var(--glass-text);font-size:20px;cursor:pointer;margin-bottom:15px;">☰</button>
     <h3>Navigation</h3>
     <ul>
-        <li><a href="/dashboard" class="{% if request.path == '/index' %}active{% endif %}"><i class="fas fa-home icon-expanded"></i><i class="fas fa-home icon-collapsed"></i> <span>Dashboard</span></a></li>
-        <li><a href="/attendance" class="{% if request.path == '/attendance' %}active{% endif %}"><i class="fas fa-calendar-check icon-expanded"></i><i class="fas fa-calendar icon-collapsed"></i> <span>Attendance</span></a></li>
-        <li><a href="/view_students" class="{% if request.path == '/students' %}active{% endif %}"><i class="fas fa-users icon-expanded"></i><i class="fas fa-user icon-collapsed"></i> <span>Students</span></a></li>
-        <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class="fas fa-cog icon-expanded"></i><i class="fas fa-wrench icon-collapsed"></i> <span>Configure</span></a></li>
-        <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class="fas fa-video icon-expanded"></i><i class="fas fa-play icon-collapsed"></i> <span>Live Feed</span></a></li>
-        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class="fas fa-clipboard-list icon-expanded"></i><i class="fas fa-list icon-collapsed"></i> <span>Seen Log</span></a></li>
-        <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class="fas fa-sign-out-alt icon-expanded"></i><i class="fas fa-times icon-collapsed"></i> <span>Logout</span></a></li>
+        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class='bx bx-home icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-home icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Dashboard</span></a></li>
+        <li><a href="/attendance" class="{% if request.path == '/attendance' %}active{% endif %}"><i class='bx bx-calendar-check icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-calendar icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Attendance</span></a></li>
+        <li><a href="/view_students" class="{% if request.path == '/view_students' %}active{% endif %}"><i class='bx bx-group icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-user icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Students</span></a></li>
+        <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class='bx bx-cog icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-wrench icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Configure</span></a></li>
+        <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class='bx bx-video icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-play icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Live Feed</span></a></li>
+        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class='bx bx-clipboard icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-list-ul icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Seen Log</span></a></li>
+        <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class='bx bx-log-out icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-x icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Logout</span></a></li>
     </ul>
 </div>
 

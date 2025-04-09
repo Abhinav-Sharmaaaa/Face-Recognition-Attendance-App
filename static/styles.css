@@ -1006,4 +1006,34 @@ body[data-theme="light"] .flash-error {
     background-color: #c82333;
     transform: scale(1.05);
 }
+/* Force Boxicons in sidebar to display properly */
+.sidebar .bx {
+    font-family: 'boxicons' !important;
+    font-style: normal;
+    font-weight: normal;
+    display: inline-block;
+    font-size: 20px;
+    color: inherit;
+/* Sidebar collapse behavior */
+.sidebar.collapsed ul li a span {
+    display: none;
+}
+
+.sidebar.collapsed ul li a .icon-expanded {
+    display: none;
+}
+
+.sidebar.collapsed ul li a .icon-collapsed {
+    display: inline-block;
+}
+
+.sidebar:not(.collapsed) ul li a .icon-expanded {
+    display: inline-block;
+}
+
+.sidebar:not(.collapsed) ul li a .icon-collapsed {
+    display: none;
+}
+    vertical-align: middle;
+}
 
