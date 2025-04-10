@@ -1,13 +1,27 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='sidebar_theme_toggle.css') }}">
+
 <div id="sidebar" class="sidebar collapsed">
     <button id="sidebarToggle" style="background:none;border:none;color:var(--glass-text);font-size:20px;cursor:pointer;margin-bottom:15px;">☰</button>
+
+    <!-- Creative SVG Slider Toggle -->
+    <div class="theme-switch-wrapper" style="margin-bottom:15px;">
+      <label class="theme-switch creative-switch">
+        <input type="checkbox" id="themeToggle">
+        <span class="slider">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle class="sun" cx="12" cy="12" r="5" fill="currentColor"></circle>
+            <path class="moon" d="M 15 12 A 3 3 0 1 1 9 12 A 5 5 0 1 0 15 12 Z" fill="currentColor" style="opacity:0;"></path>
+          </svg>
+        </span>
+      </label>
+    </div>
     <h3>Navigation</h3>
     <ul>
         <li><a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class='bx bx-home icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-home icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Dashboard</span></a></li>
-        <li><a href="/attendance" class="{% if request.path == '/attendance' %}active{% endif %}"><i class='bx bx-calendar-check icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-calendar icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Attendance</span></a></li>
         <li><a href="/view_students" class="{% if request.path == '/view_students' %}active{% endif %}"><i class='bx bx-group icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-user icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Students</span></a></li>
         <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class='bx bx-cog icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-wrench icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Configure</span></a></li>
         <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class='bx bx-video icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-play icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Live Feed</span></a></li>
-        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class='bx bx-clipboard icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-list-ul icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Seen Log</span></a></li>
+        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class='bx bx-clipboard icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-list-ul icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Seen Logs</span></a></li>
         <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class='bx bx-log-out icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-x icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Logout</span></a></li>
     </ul>
 </div>
@@ -17,6 +31,35 @@ document.getElementById('sidebarToggle').onclick = function() {
     document.getElementById('sidebar').classList.toggle('collapsed');
     document.querySelector('.main-content').classList.toggle('expanded');
 };
+</script>
+
+<script>
+  const themeToggleCheckbox = document.getElementById('themeToggle');
+  const sun = document.querySelector('.sun');
+  const moon = document.querySelector('.moon');
+
+  function setTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    themeToggleCheckbox.checked = theme === 'dark';
+
+    if(theme === 'dark') {
+      sun.style.opacity = '0';
+      moon.style.opacity = '1';
+    } else {
+      sun.style.opacity = '1';
+      moon.style.opacity = '0';
+    }
+  }
+
+  themeToggleCheckbox.addEventListener('change', () => {
+    const newTheme = themeToggleCheckbox.checked ? 'dark' : 'light';
+    setTheme(newTheme);
+  });
+
+  // Initialize theme on load
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  setTheme(savedTheme);
 </script>
 <div class="main-content">
     <!-- Main content starts here -->

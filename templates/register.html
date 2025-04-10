@@ -21,8 +21,8 @@
         <!-- End Theme Toggle Switch -->
     <h1>Register a User</h1>
     <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
-        Role:
-        <select name="role" id="roleSelect" required>
+        <label for="roleSelect">Role:</label>
+        <select name="role" id="roleSelect" class="themed-select" required>
             <option value="Student">Student</option>
             <option value="Staff">Staff</option>
             <option value="Others">Others</option>
@@ -31,16 +31,16 @@
         Name: <input type="text" name="name" required><br>
 
         <div id="branchDiv">
-            Branch:
-            <select name="branch" id="branchSelect">
+            <label for="branchSelect">Branch:</label>
+            <select name="branch" id="branchSelect" class="themed-select">
                 <option value="">Select Branch</option> <!-- Added default option -->
                 <option value="C.S.E.">C.S.E.</option>
                 <option value="I.T.">I.T.</option>
-            <option value="Electronics">Electronics</option>
-            <option value="Mechanical">Mechanical</option>
-            <option value="Automobile">Automobile</option>
-            <option value="Civil">Civil</option>
-            <option value="Pharmacy">Pharmacy</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Automobile">Automobile</option>
+                <option value="Civil">Civil</option>
+                <option value="Pharmacy">Pharmacy</option>
             </select><br>
         </div>
 

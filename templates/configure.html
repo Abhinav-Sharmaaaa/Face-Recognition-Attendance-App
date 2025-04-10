@@ -7,6 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <!-- Removed Bootstrap CSS link -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <!-- Removed internal style block -->
 </head>
 <body> <!-- Removed glass-container from body -->
@@ -45,7 +46,7 @@
             <div> <!-- Removed Bootstrap classes -->
                 <label for="stop_time">Stop Time:</label>
                 <div> <!-- Removed Bootstrap classes -->
-                    <input type="time" id="stop_time" name="stop_time" value="{{ stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
+                    <input type="time" id="stop_time" name="stop_time" value="{{ current_stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
                     <div>Set the time when the live feed should automatically stop.</div> <!-- Removed form-text class -->
                 </div>
             </div>

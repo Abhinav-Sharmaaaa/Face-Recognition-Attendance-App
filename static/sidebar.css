@@ -1,0 +1,109 @@
+/* Sidebar Styles */
+.sidebar {
+    width: 220px;
+    height: 100vh;
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    padding: 20px 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 999;
+    box-sizing: border-box;
+    transition: width 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
+}
+
+.sidebar h2, .sidebar h3 {
+    color: var(--glass-text);
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    align-self: center;
+    text-align: center;
+}
+
+.sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--glass-link);
+    text-decoration: none;
+    font-size: 1.1rem;
+    font-weight: 500;
+    padding: 10px;
+    width: 100%;
+    border-radius: 8px;
+    transition: background-color 0.3s, color 0.3s;
+    margin-bottom: 10px;
+}
+
+.sidebar a:hover {
+    background-color: var(--btn-option-hover-bg);
+    color: var(--glass-link-hover);
+}
+
+.sidebar a.btn-danger {
+    background-color: #dc3545;
+    color: #fff;
+    justify-content: center;
+}
+
+.sidebar a.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+    padding: 20px 5px;
+}
+
+.sidebar.collapsed span {
+    display: none;
+}
+
+.sidebar.collapsed:hover {
+    width: 220px !important;
+    padding: 20px 15px !important;
+}
+
+.sidebar.collapsed:hover span {
+    display: inline;
+}
+
+.main-content {
+    margin-left: 240px;
+    padding: 20px;
+    box-sizing: border-box;
+    transition: margin-left 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .sidebar, #sidebar {
+        width: 60px;
+        padding: 20px 5px;
+    }
+    .sidebar h3,
+    .sidebar ul li a span {
+        display: none;
+    }
+    .main-content {
+        margin-left: 80px;
+    }
+    .sidebar:hover {
+        width: 220px !important;
+        padding: 20px 15px !important;
+    }
+    .sidebar:hover h3,
+    .sidebar:hover ul li a span {
+        display: inline;
+    }
+    .sidebar:hover ~ .main-content {
+        margin-left: 240px !important;
+    }
+}

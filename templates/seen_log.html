@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seen Log</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <!-- Removed internal style block to rely on styles.css -->
 </head>
 <body data-theme="light">
@@ -19,15 +20,13 @@
     <div class="content-wrapper glass-container">
         <div class="header-section">
             <h1>Face Sighting Log</h1>
-            <button id="getAttendanceBtn" class="action-button">Get Attendance</button>
+        </div>
+        <div class="top-right-buttons">
+            <a href="{{ url_for('unknown_captures') }}" class="action-button view-unknown-btn">View Unknown Captures</a>
+            <a href="{{ url_for('attendance_page') }}" class="action-button">View Attendance</a>
         </div>
 
-    <div class="attendance-list">
-        <h2>Attendance Report</h2>
-        <ul id="attendance-data">
-            <!-- Attendance data will be loaded here -->
-        </ul>
-    </div>
+    <!-- Attendance report removed -->
 
     <table class="attendance-table"> <!-- Added theme class -->
         <thead>
@@ -105,28 +104,12 @@
                 </tr>
             {% endif %}
 
-            {# Add section for Unknown Logs #}
-            {% if unknown_logs %}
-                {% for log in unknown_logs %}
-                <tr>
-                    <td>{{ log.type }}</td>
-                    <td>Unknown (ID: {{ log._id }})</td> {# Display MongoDB ID for reference #}
-                    <td>{{ log.timestamp_str }}</td>
-                    <td>{{ log.status_at_log }}</td>
-                    <td>
-                        {% if log.face_image_base64 %}
-                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face"> <!-- Removed log-image class -->
-                        {% else %}
-                            No Image
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            {% endif %}
-            {# End section for Unknown Logs #}
 
         </tbody>
     </table>
+
+
+    <a href="{{ url_for('index') }}" class="back-link">Back to Admin Dashboard</a>
 
     <form action="{{ url_for('reset_seen_log') }}" method="post" class="reset-form">
         <button type="submit" class="action-button danger" onclick="return confirm('Are you sure you want to reset all seen logs? This action cannot be undone.');">
@@ -134,66 +117,7 @@
         </button>
     </form>
 
-    <a href="{{ url_for('index') }}" class="back-link">Back to Admin Dashboard</a>
-
-    <script>
-        document.getElementById('getAttendanceBtn').addEventListener('click', function() {
-            const button = this; // Reference to the button
-            const attendanceListDiv = document.getElementById('attendance-list');
-            const attendanceDataUl = document.getElementById('attendance-data');
-
-            // Show loading state and disable button
-            attendanceDataUl.innerHTML = '<li>Loading attendance data...</li>';
-            attendanceListDiv.style.display = 'block'; // Make the container visible
-            button.disabled = true;
-            button.textContent = 'Loading...'; // Change button text
-
-            fetch("{{ url_for('get_attendance') }}") // Use url_for for the endpoint
-                .then(response => {
-                    if (!response.ok) {
-                        // Try to parse error message from backend if available
-                        return response.json().then(errData => {
-                            throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-                        }).catch(() => {
-                            // Fallback if response is not JSON or doesn't have 'error' field
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    attendanceDataUl.innerHTML = ''; // Clear loading message/previous results
-                    if (data.error) { // Check for application-level errors returned in JSON
-                        attendanceDataUl.innerHTML = `<li>Error: ${data.error}</li>`; // Removed text-danger class
-                    } else if (!data || data.length === 0) { // Check if data is null or empty array
-                        attendanceDataUl.innerHTML = '<li>No attendance data found for today.</li>';
-                    } else {
-                        data.forEach(student => {
-                            const li = document.createElement('li');
-                            // Format timestamps nicely, handle potential nulls explicitly
-                            const arrivingTime = student.arriving_time
-                                ? new Date(student.arriving_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                                : 'N/A';
-                            const leavingTime = student.leaving_time
-                                ? new Date(student.leaving_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-                                : 'N/A';
-                            li.textContent = `${student.name}: Arriving: ${arrivingTime}, Leaving: ${leavingTime}`;
-                            attendanceDataUl.appendChild(li);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching attendance:', error);
-                    // Display a user-friendly error message
-                    attendanceDataUl.innerHTML = `<li>Error fetching attendance data: ${error.message}. Please check the console for details.</li>`; // Removed text-danger class
-                })
-                .finally(() => {
-                    // Re-enable button and restore text regardless of success or failure
-                    button.disabled = false;
-                    button.textContent = 'Get Attendance';
-                });
-        });
-    </script>
+    <!-- Removed embedded attendance fetching script -->
     </div>
     <script>
         const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');

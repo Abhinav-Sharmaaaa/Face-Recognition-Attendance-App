@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>View Students</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <!-- Removed internal style block -->
 </head>
 <body data-theme="light">
@@ -19,15 +20,7 @@
     <div class="glass-container">
         <h1>View Students</h1>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}">{{ message }}</div>
-                {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+        {# Flash messages suppressed on this page to avoid unwanted notifications #}
 
         <div class="filter-container">
             <form method="GET" action="{{ url_for('view_students') }}">

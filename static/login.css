@@ -1,0 +1,8 @@
+.login-container {
+    max-width: 400px;
+    width: 90%;
+    margin: 20px auto;
+    text-align: center;
+    /* Apply glass effect directly if needed */
+    /* background: rgba(255, 255, 255, 0.08); ... etc */
+}

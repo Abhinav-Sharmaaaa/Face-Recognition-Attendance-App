@@ -102,7 +102,8 @@ body[data-theme="light"] {
     button,
     .btn-option,
     .action-link,
-    .back-link {
+    .back-link,
+    .action-button {
         background-color: #007bff !important;
         color: #ffffff !important;
         border-color: #007bff !important;
@@ -111,7 +112,8 @@ body[data-theme="light"] {
     button:hover,
     .btn-option:hover,
     .action-link:hover,
-    .back-link:hover {
+    .back-link:hover,
+    .action-button:hover {
         background-color: #0056b3 !important;
         border-color: #0056b3 !important;
         color: #ffffff !important;
@@ -496,7 +498,78 @@ a:hover {
     border-radius: 15px; /* Match other elements */
     border: 1px solid var(--glass-border); /* Use theme variable */
     box-shadow: var(--glass-shadow); /* Use theme variable */
-    overflow: hidden; /* Keep rounded corners */
+}
+
+/* Unknown Captures Page Enhancements */
+.header-section {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.header-section h1 {
+    margin: 0;
+    flex: 1 1 auto;
+    font-size: 28px;
+}
+
+.header-section a.action-button {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.header-section form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    flex: 1 1 100%;
+}
+
+.header-section form label {
+    margin: 0;
+}
+
+.header-section form input[type="datetime-local"] {
+    flex: 1 1 150px;
+    min-width: 120px;
+}
+
+.header-section form button,
+.header-section form a.action-button {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Style collapsible date groups */
+details {
+    margin-bottom: 15px;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+details summary {
+    font-weight: 600;
+    font-size: 18px;
+    cursor: pointer;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+/* Constrain images inside tables */
+.attendance-table img {
+    max-width: 120px;
+    max-height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
 }
 
 .attendance-table th, .attendance-table td {
@@ -514,6 +587,67 @@ a:hover {
 
 .attendance-table tr:hover {
     background-color: rgba(255, 255, 255, 0.1); /* Keep subtle hover */
+}
+
+/* Unknown Captures Page Enhancements */
+
+/* Limit image size inside attendance table */
+.attendance-table img {
+    max-width: 100px;
+    max-height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--glass-border);
+}
+
+/* Style collapsible details */
+details {
+    margin: 15px 0;
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 10px;
+    transition: background-color 0.3s ease;
+}
+
+details:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Style summary inside details */
+details summary {
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1em;
+    outline: none;
+    padding: 5px;
+}
+
+/* Improve spacing for filter form */
+.header-section form {
+    margin-top: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.header-section form label {
+    margin-right: 5px;
+}
+
+.header-section form input[type="datetime-local"] {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid var(--glass-border);
+    background: transparent;
+    color: inherit;
+}
+
+.header-section form button,
+.header-section form a.action-button {
+    padding: 6px 12px;
+    border-radius: 4px;
 }
 
 /* Flash Messages */
@@ -1035,5 +1169,140 @@ body[data-theme="light"] .flash-error {
     display: none;
 }
     vertical-align: middle;
+}
+/* Dropdown Theming Patch */
+select {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--input-border);
+    border-radius: 8px;
+    padding: 12px 15px;
+    font-size: 16px;
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+}
+
+select:focus {
+    background-color: var(--input-focus-bg);
+    border-color: var(--input-focus-border);
+    outline: none;
+    box-shadow: 0 0 8px rgba(128, 189, 255, 0.3);
+}
+
+select option {
+    background-color: var(--input-bg);
+    color: var(--input-text);
+    padding: 10px;
+}
+
+/* Optional: highlight option on hover (may not work in all browsers) */
+select option:hover {
+    background-color: var(--input-focus-bg);
+    color: var(--input-text);
+}
+/* Base style for action buttons */
+.action-button {
+    background-color: #007bff;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.action-button:hover {
+    background-color: #0056b3;
+    transform: scale(1.05);
+    text-decoration: none;
+}
+
+/* Custom style for the "View Unknown Captures" button */
+.view-unknown-btn {
+    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    border: none;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.view-unknown-btn:hover {
+    background: linear-gradient(135deg, #feb47b, #ff7e5f);
+    transform: scale(1.05);
+    text-decoration: none;
+}
+
+/* Position top-right button group inside header */
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.top-right-buttons {
+    position: fixed;
+.reset-form {
+    margin: 20px auto;
+    text-align: center;
+}
+
+.reset-form button {
+    width: auto;
+    display: inline-block;
+    margin-top: 10px;
+}
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    z-index: 1000;
+}
+
+.top-right-buttons form {
+    margin: 0;
+}
+
+.top-right-buttons .action-button {
+    margin: 0;
+    white-space: nowrap;
+}
+/* Themed dropdown styling */
+.themed-select {
+    width: 100%;
+    padding: 12px 15px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--input-border);
+    color: var(--input-text);
+    border-radius: 8px;
+    font-size: 16px;
+    transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease, border-color var(--transition-speed) ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%225%22%20viewBox%3D%220%200%2010%205%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M0%200l5%205%205-5z%22%20fill%3D%22%23aaa%22/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    padding-right: 35px; /* space for arrow */
+    cursor: pointer;
+}
+
+.themed-select:focus {
+    border-color: var(--input-focus-border);
+    background-color: var(--input-focus-bg);
+    outline: none;
+    box-shadow: 0 0 8px rgba(128, 189, 255, 0.3);
+}
+
+/* Explicitly style dropdown options for readability */
+.themed-select option {
+    background-color: var(--input-bg);
+    color: var(--input-text);
 }
 

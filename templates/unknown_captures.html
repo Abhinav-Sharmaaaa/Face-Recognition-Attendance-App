@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Unknown Captures</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
+</head>
+<body data-theme="light">
+    {% include 'sidebar.html' %}
+    <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" />
+            <div class="slider round"></div>
+        </label>
+    </div>
+    <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
+    <div class="content-wrapper glass-container">
+        <div class="header-section">
+            <h1>Unknown Captures</h1>
+            <a href="{{ url_for('attendance_page') }}" class="action-button">Back to Attendance</a>
+            <form method="get" action="{{ url_for('unknown_captures') }}" style="margin-top: 15px;">
+                <label for="start_time">Start Time:</label>
+                <input type="datetime-local" id="start_time" name="start_time" value="{{ request.args.get('start_time', '')|replace(' ', 'T') }}">
+                <label for="end_time">End Time:</label>
+                <input type="datetime-local" id="end_time" name="end_time" value="{{ request.args.get('end_time', '')|replace(' ', 'T') }}">
+                <button type="submit" class="action-button">Filter</button>
+                <a href="{{ url_for('unknown_captures') }}" class="action-button">Clear Filter</a>
+            </form>
+        </div>
+
+        {% if grouped_unknowns %}
+            {% for date_str, logs in grouped_unknowns.items() %}
+                <details>
+                    <summary><strong>{{ date_str }}</strong> ({{ logs|length }} captures)</summary>
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Status</th>
+                                <th>Image</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.timestamp_str }}</td>
+                                <td>{{ log.status_at_log }}</td>
+                                <td>
+                                    {% if log.face_image_base64 %}
+                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Unknown Face">
+                                    {% else %}
+                                        No Image
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p>No unknown captures found.</p>
+        {% endif %}
+
+    </div>
+    <script>
+        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+
+        if (currentTheme) {
+            document.body.setAttribute('data-theme', currentTheme);
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        } else {
+            document.body.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.body.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.body.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+    </script>
+</body>
+</html>
