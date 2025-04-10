@@ -16,14 +16,6 @@
 <body data-theme="light"> <!-- Added data-theme attribute -->
     <!-- Use the general container class from styles.css and apply glass effect -->
     <div class="container glass-container">
-        <!-- Theme Toggle Switch -->
-        <div class="theme-switch-wrapper">
-            <label class="theme-switch" for="checkbox">
-                <input type="checkbox" id="checkbox" />
-                <div class="slider round"></div>
-            </label>
-            <em>Enable Dark Mode!</em>
-        </div>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
         <h2>Admin Login</h2>
          <!-- The form styles from styles.css will apply -->
@@ -40,30 +32,6 @@
     <script>
         const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
         const currentTheme = localStorage.getItem('theme');
-        const bodyElement = document.body; // Get the body element
-
-        if (currentTheme) {
-            bodyElement.setAttribute('data-theme', currentTheme); // Apply theme to body
-
-            if (currentTheme === 'dark') {
-                toggleSwitch.checked = true;
-            }
-        } else {
-             // Default to light theme if nothing is stored
-             bodyElement.setAttribute('data-theme', 'light');
-        }
-
-        function switchTheme(e) {
-            if (e.target.checked) {
-                bodyElement.setAttribute('data-theme', 'dark'); // Apply theme to body
-                localStorage.setItem('theme', 'dark');
-            } else {
-                bodyElement.setAttribute('data-theme', 'light'); // Apply theme to body
-                localStorage.setItem('theme', 'light');
-            }
-        }
-
-        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
 </body>
 </html>

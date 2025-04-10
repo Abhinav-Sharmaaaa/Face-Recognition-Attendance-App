@@ -13,49 +13,42 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <!-- Link to the glass theme stylesheet -->
 </head>
-<body data-theme="light"> <!-- Add data-theme attribute -->
-    <div class="container glass-container">
-        <!-- Theme Toggle Switch -->
-        <div class="theme-switch-wrapper">
-            <label class="theme-switch" for="checkbox">
-                <input type="checkbox" id="checkbox" />
-                <div class="slider round"></div>
-            </label>
-            <em>Toggle Theme</em>
-        </div>
-        <!-- End Theme Toggle Switch -->
-        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
-        <h1 class="welcome-text">Welcome to SecureVision</h1>
-        <p class="sub-text">Please select an option to proceed</p>
-        <div class="button-container" id="admin-features">
-            <a href="/register" class="btn-option">
-                <i class="fa-solid fa-user-plus fa-2x"></i>
-                <span>Register Student</span>
-            </a>
-            <!-- Attendance links removed -->
-            <a href="/view_students" class="btn-option">
-                <i class="fa-solid fa-users fa-2x"></i>
-                <span>View Students</span>
-            </a>
-            <a href="/attendance" class="btn-option">
-                <i class="fa-solid fa-calendar-check fa-2x"></i>
-                <span>View Attendance</span>
-            </a>
-            <a href="/live_feed" class="btn-option">
-                <i class="fa-solid fa-video fa-2x"></i>
-                <span>Live Feed</span>
-            </a>
-            <a href="/seen_log" class="btn-option">
-                <i class="fa-solid fa-clock-rotate-left fa-2x"></i>
-                <span>Seen Log</span>
-            </a>
-            <a href="/configure" class="btn-option">
-                <i class="fa-solid fa-gear fa-2x"></i>
-                <span>Configure</span>
-            </a>
-            <a href="/logout" class="btn btn-danger">
-                <i class="fa-solid fa-right-from-bracket"></i> Logout
-            </a>
+<body data-theme="light">
+    <div class="main-content">
+        <div class="container glass-container">
+            <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
+            <h1 class="welcome-text">Welcome to SecureVision</h1>
+            <p class="sub-text">Please select an option to proceed</p>
+            <div class="button-container" id="admin-features">
+                <a href="/register" class="btn-option">
+                    <i class="fa-solid fa-user-plus fa-2x"></i>
+                    <span>Register Student</span>
+                </a>
+                <!-- Attendance links removed -->
+                <a href="/view_students" class="btn-option">
+                    <i class="fa-solid fa-users fa-2x"></i>
+                    <span>View Students</span>
+                </a>
+                <a href="/attendance" class="btn-option">
+                    <i class="fa-solid fa-calendar-check fa-2x"></i>
+                    <span>View Attendance</span>
+                </a>
+                <a href="/live_feed" class="btn-option">
+                    <i class="fa-solid fa-video fa-2x"></i>
+                    <span>Live Feed</span>
+                </a>
+                <a href="/seen_log" class="btn-option">
+                    <i class="fa-solid fa-clock-rotate-left fa-2x"></i>
+                    <span>Seen Log</span>
+                </a>
+                <a href="/configure" class="btn-option">
+                    <i class="fa-solid fa-gear fa-2x"></i>
+                    <span>Configure</span>
+                </a>
+                <a href="/logout" class="btn btn-danger">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </a>
+            </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -66,23 +59,7 @@
 
         if (currentTheme) {
             document.body.setAttribute('data-theme', currentTheme);
-
-            if (currentTheme === 'dark') {
-                toggleSwitch.checked = true;
-            }
         }
-
-        function switchTheme(e) {
-            if (e.target.checked) {
-                document.body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark'); // Save theme preference
-            } else {
-                document.body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light'); // Save theme preference
-            }
-        }
-
-        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
 </body>
 </html>

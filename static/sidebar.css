@@ -1,4 +1,11 @@
 /* Sidebar Styles */
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
 .sidebar {
     width: 220px;
     height: 100vh;
@@ -17,7 +24,7 @@
     z-index: 999;
     box-sizing: border-box;
     transition: width 0.3s ease, padding 0.3s ease;
-    overflow: hidden;
+    overflow: hidden; /* Prevents content overflow during transition */
 }
 
 .sidebar h2, .sidebar h3 {
@@ -26,6 +33,7 @@
     margin-bottom: 30px;
     align-self: center;
     text-align: center;
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .sidebar a {
@@ -41,6 +49,7 @@
     border-radius: 8px;
     transition: background-color 0.3s, color 0.3s;
     margin-bottom: 10px;
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 .sidebar a:hover {
@@ -58,52 +67,135 @@
     background-color: #c82333;
 }
 
+/* --- Collapsed State --- */
 .sidebar.collapsed {
-    width: 60px;
+    width: 60px;  /* Width when collapsed */
     padding: 20px 5px;
 }
 
+/* Hide text when collapsed */
 .sidebar.collapsed span {
     display: none;
 }
-
-.sidebar.collapsed:hover {
-    width: 220px !important;
-    padding: 20px 15px !important;
+.sidebar.collapsed h3 {
+    display: none; /* Also hide the 'Navigation' heading */
 }
 
+
+/* --- Expand on Hover (when collapsed) --- */
+.sidebar.collapsed:hover {
+    width: 220px !important; /* Expand width on hover */
+    padding: 20px 15px !important; /* Restore padding on hover */
+}
+
+/* Show text on hover when collapsed */
 .sidebar.collapsed:hover span {
     display: inline;
 }
+.sidebar.collapsed:hover h3 {
+    display: block; /* Show heading on hover */
+}
 
-.main-content {
-    margin-left: 240px;
+/* --- Layout Container --- */
+.layout {
+    display: flex;
+}
+
+/* --- Main Content Area --- */
+.layout .content {
+    flex: 1; /* Take remaining space */
+    margin-left: 220px; /* Default margin for expanded sidebar */
     padding: 20px;
     box-sizing: border-box;
     transition: margin-left 0.3s ease;
 }
 
+/* Adjust content margin when sidebar is collapsed */
+.sidebar.collapsed ~ .content, /* Sibling selector */
+.layout .sidebar.collapsed + .content { /* Inside layout */
+    margin-left: 80px; /* Margin for collapsed sidebar (60px width + 20px padding/gap) */
+}
+
+/* Adjust content margin when collapsed sidebar is hovered */
+.sidebar.collapsed:hover ~ .content,
+.layout .sidebar.collapsed:hover + .content {
+     margin-left: 240px !important; /* Margin for expanded sidebar on hover (220px width + 20px padding/gap) */
+}
+
+
+/* --- Responsive Design --- */
 @media (max-width: 768px) {
-    .sidebar, #sidebar {
+    /* Collapse sidebar by default on smaller screens */
+    .sidebar {
         width: 60px;
         padding: 20px 5px;
     }
     .sidebar h3,
-    .sidebar ul li a span {
+    .sidebar span {
         display: none;
     }
-    .main-content {
-        margin-left: 80px;
+
+    /* Adjust content margin for initially collapsed sidebar */
+    .layout .content {
+        margin-left: 80px; /* Initial margin for collapsed sidebar */
     }
+
+    /* Expand sidebar on hover */
     .sidebar:hover {
         width: 220px !important;
         padding: 20px 15px !important;
     }
     .sidebar:hover h3,
-    .sidebar:hover ul li a span {
-        display: inline;
+    .sidebar:hover span {
+        display: inline; /* Use inline for spans */
     }
-    .sidebar:hover ~ .main-content {
-        margin-left: 240px !important;
+     .sidebar:hover h3 {
+        display: block; /* Use block for headings */
+     }
+
+
+    /* Adjust content margin when sidebar is hovered (expanded) */
+    .sidebar:hover ~ .content,
+    .layout .sidebar:hover + .content {
+         margin-left: 240px !important; /* Margin when hovered */
     }
+}
+
+
+/* --- Icon Visibility --- */
+/* Hide collapsed icon by default */
+.sidebar .icon-collapsed {
+    display: none;
+}
+/* Hide expanded icon when sidebar is collapsed */
+.sidebar.collapsed .icon-expanded {
+    display: none;
+}
+/* Show collapsed icon when sidebar is collapsed */
+.sidebar.collapsed .icon-collapsed {
+    display: inline;
+}
+/* Ensure expanded icon shows when not collapsed (redundant but explicit) */
+.sidebar:not(.collapsed) .icon-expanded {
+     display: inline-block; /* Or inline, depending on icon type */
+}
+
+
+/* Hide theme toggle button when sidebar is collapsed */
+.sidebar.collapsed .theme-switch-wrapper {
+    display: none;
+}
+
+.sidebar.collapsed:hover .theme-switch-wrapper {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Styles for pages WITHOUT sidebar (using body class) */
+body:not(.with-sidebar) .main-content, /* Adjust if needed */
+body:not(.with-sidebar) .content {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 800px; /* Or desired max width */
+    padding: 20px;
 }

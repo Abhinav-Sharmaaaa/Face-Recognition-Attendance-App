@@ -5,65 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register User</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-</head>
-<body data-theme="light"> <!-- Add data-theme attribute -->
-    {% include 'sidebar.html' %}
-    <div class="container glass-container">
-        <!-- Theme Toggle Switch -->
-        <div class="theme-switch-wrapper">
-            <label class="theme-switch" for="checkbox">
-                <input type="checkbox" id="checkbox" />
-                <div class="slider round"></div>
-            </label>
-            <em>Toggle Theme</em>
-        </div>
-        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
-        <!-- End Theme Toggle Switch -->
-    <h1>Register a User</h1>
-    <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
-        <label for="roleSelect">Role:</label>
-        <select name="role" id="roleSelect" class="themed-select" required>
-            <option value="Student">Student</option>
-            <option value="Staff">Staff</option>
-            <option value="Others">Others</option>
-        </select><br>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}"> </head>
+<body data-theme="light"> <div class="layout"> {% include 'sidebar.html' %} <div class="content"> <div class="container glass-container">
+                <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
+                <h1>Register a User</h1>
+                <form id="registerForm" action="/register" method="post" enctype="multipart/form-data">
+                    <label for="roleSelect">Role:</label>
+                    <select name="role" id="roleSelect" class="themed-select" required>
+                        <option value="Student">Student</option>
+                        <option value="Staff">Staff</option>
+                        <option value="Others">Others</option>
+                    </select><br>
 
-        Name: <input type="text" name="name" required><br>
+                    Name: <input type="text" name="name" required><br>
 
-        <div id="branchDiv">
-            <label for="branchSelect">Branch:</label>
-            <select name="branch" id="branchSelect" class="themed-select">
-                <option value="">Select Branch</option> <!-- Added default option -->
-                <option value="C.S.E.">C.S.E.</option>
-                <option value="I.T.">I.T.</option>
-                <option value="Electronics">Electronics</option>
-                <option value="Mechanical">Mechanical</option>
-                <option value="Automobile">Automobile</option>
-                <option value="Civil">Civil</option>
-                <option value="Pharmacy">Pharmacy</option>
-            </select><br>
-        </div>
+                    <div id="branchDiv">
+                        <label for="branchSelect">Branch:</label>
+                        <select name="branch" id="branchSelect" class="themed-select">
+                            <option value="">Select Branch</option> <option value="C.S.E.">C.S.E.</option>
+                            <option value="I.T.">I.T.</option>
+                            <option value="Electronics">Electronics</option>
+                            <option value="Mechanical">Mechanical</option>
+                            <option value="Automobile">Automobile</option>
+                            <option value="Civil">Civil</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                        </select><br>
+                    </div>
 
-        <div>
-            <label for="photo">Capture Photo:</label>
-            <video id="video" width="320" height="240" autoplay></video>
-            <button type="button" id="snap">Capture</button>
-            <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-            <input type="hidden" name="photo" id="photo">
-            <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
-            <button type="button" id="reCapture" style="display:none;">Re-capture</button>
-        </div>
+                    <div>
+                        <label for="photo">Capture Photo:</label>
+                        <video id="video" width="320" height="240" autoplay></video>
+                        <button type="button" id="snap">Capture</button>
+                        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+                        <input type="hidden" name="photo" id="photo">
+                        <img id="capturedPhoto" src="" alt="Captured Photo" style="display:none; width:320px; height:240px;">
+                        <button type="button" id="reCapture" style="display:none;">Re-capture</button>
+                    </div>
 
-        <div>
-            <label for="uploadPhoto">Or Upload Photo:</label>
-            <input type="file" name="uploadPhoto" id="uploadPhoto" accept="image/*">
-        </div>
+                    <div>
+                        <label for="uploadPhoto">Or Upload Photo:</label>
+                        <input type="file" name="uploadPhoto" id="uploadPhoto" accept="image/*">
+                    </div>
 
-        <button type="submit">Register</button>
-    </form>
-    <a href="/">Back to Home</a>
-
-    <script>
+                    <button type="submit">Register</button>
+                </form>
+                <a href="/">Back to Home</a>
+            </div> </div> </div> <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const photoInput = document.getElementById('photo');
@@ -82,18 +69,18 @@
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataURL = canvas.toDataURL('image/png');
-            photoInput.value = dataURL; 
-            capturedPhoto.src = dataURL; 
+            photoInput.value = dataURL;
+            capturedPhoto.src = dataURL;
             video.style.display = 'none';
             capturedPhoto.style.display = 'block';
             reCaptureButton.style.display = 'block';
         });
 
-       
+
         reCaptureButton.addEventListener('click', () => {
-            video.style.display = 'block'; 
-            capturedPhoto.style.display = 'none'; 
-            reCaptureButton.style.display = 'none'; 
+            video.style.display = 'block';
+            capturedPhoto.style.display = 'none';
+            reCaptureButton.style.display = 'none';
         });
 
         // --- Added JavaScript for conditional branch field ---
@@ -121,34 +108,12 @@
         // --- End of added JavaScript ---
 
 
-        // Theme switching logic
-        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
-        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        // Theme switching logic can be added here if needed,
+        // referencing the toggle in sidebar.html
+        // const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        // const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        // ...etc
 
-        if (currentTheme) {
-            document.body.setAttribute('data-theme', currentTheme);
-
-            if (currentTheme === 'dark') {
-                toggleSwitch.checked = true;
-            }
-        } else {
-            // Default to light theme if no preference is stored
-            document.body.setAttribute('data-theme', 'light');
-            localStorage.setItem('theme', 'light');
-        }
-
-        function switchTheme(e) {
-            if (e.target.checked) {
-                document.body.setAttribute('data-theme', 'dark');
-                localStorage.setItem('theme', 'dark'); // Save theme preference
-            } else {
-                document.body.setAttribute('data-theme', 'light');
-                localStorage.setItem('theme', 'light'); // Save theme preference
-            }
-        }
-
-        toggleSwitch.addEventListener('change', switchTheme, false);
     </script>
-    </div>
 </body>
 </html>

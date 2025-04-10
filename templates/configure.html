@@ -15,14 +15,6 @@
     <!-- Removed outer container div -->
         <h1>Configure Settings</h1>
 
-        <!-- Theme Toggle Switch -->
-        <div class="theme-switch-wrapper"> <!-- Removed inline style -->
-            <label class="theme-switch" for="theme-checkbox">
-                <input type="checkbox" id="theme-checkbox" />
-                <div class="slider round"></div>
-            </label>
-            <em>Toggle Dark Mode</em> <!-- Removed inline style -->
-        </div>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
 
         <div class="glass-container"> <!-- Added glass container for main content -->
@@ -106,28 +98,6 @@
         const currentTheme = localStorage.getItem('theme');
         const bodyElement = document.body; // Cache body element
 
-        // Function to apply theme using data-theme attribute
-        function setTheme(theme) {
-            bodyElement.setAttribute('data-theme', theme); // Set data-theme attribute
-            localStorage.setItem('theme', theme); // Save preference
-            themeToggle.checked = (theme === 'dark'); // Update checkbox state based on 'dark'
-        }
-
-        // Apply saved theme on load or default to light
-        if (currentTheme) {
-            setTheme(currentTheme);
-        } else {
-            setTheme('light'); // Default to light theme
-        }
-
-        // Add event listener for toggle change
-        themeToggle.addEventListener('change', function() {
-            if (this.checked) {
-                setTheme('dark');
-            } else {
-                setTheme('light');
-            }
-        });
 
     </script>
 </body>

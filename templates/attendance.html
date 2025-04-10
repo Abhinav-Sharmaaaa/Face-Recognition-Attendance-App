@@ -6,107 +6,66 @@
     <title>Daily Attendance</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='attendance.css') }}">
-    <!-- Removed inline styles, now using glass_theme.css and styles.css -->
-</head>
-<body data-theme="light"> <!-- Added data-theme attribute -->
-    {% include 'sidebar.html' %}
-    <div class="container glass-container"> <!-- Added glass-container class -->
-        <!-- Theme Toggle Switch -->
-        <div class="theme-switch-wrapper">
-            <label class="theme-switch" for="checkbox">
-                <input type="checkbox" id="checkbox" />
-                <div class="slider round"></div>
-            </label>
-            <em>Toggle Theme</em>
-        </div>
-        <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
-        <!-- End Theme Toggle Switch -->
-        <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
+    <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}"> </head>
+<body data-theme="light"> <div class="layout"> {% include 'sidebar.html' %} <div class="content"> <div class="container glass-container"> <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
+                <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
 
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <ul class="flash-messages">
-                {% for category, message in messages %}
-                    <li class="{{ category }}">{{ message }}</li>
-                {% endfor %}
-                </ul>
-            {% endif %}
-        {% endwith %}
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class="flash-messages">
+                        {% for category, message in messages %}
+                            <li class="{{ category }}">{{ message }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
 
-        <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Dashboard</a>
-        <a href="{{ url_for('export_attendance_excel') }}" class="back-link" style="margin-left: 10px;">Export to Excel</a>
+                <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Dashboard</a>
+                <a href="{{ url_for('export_attendance_excel') }}" class="back-link" style="margin-left: 10px;">Export to Excel</a>
 
-        {% if attendance_records %}
-            <table class="attendance-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Branch/Dept</th>
-                        <th>Role</th>
-                        <th>Date</th>
-                        <th>Arriving Time</th>
-                        <th>Leaving Time</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in attendance_records %}
-                    <tr>
-                        <td>{{ record.name }}</td>
-                        <td>{{ record.branch | default('N/A') }}</td>
-                        <td>{{ record.role | default('N/A') | title }}</td>
-                        <td>{{ record.date }}</td>
-                        <td>{{ record.arriving_time }}</td>
-                        <td>{{ record.leaving_time }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        {% else %}
-            <p class="no-records">No attendance records found for today.</p>
-        {% endif %}
+                {% if attendance_records %}
+                    <table class="attendance-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Branch/Dept</th>
+                                <th>Role</th>
+                                <th>Date</th>
+                                <th>Arriving Time</th>
+                                <th>Leaving Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in attendance_records %}
+                            <tr>
+                                <td>{{ record.name }}</td>
+                                <td>{{ record.branch | default('N/A') }}</td>
+                                <td>{{ record.role | default('N/A') | title }}</td>
+                                <td>{{ record.date }}</td>
+                                <td>{{ record.arriving_time }}</td>
+                                <td>{{ record.leaving_time }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="no-records">No attendance records found for today.</p>
+                {% endif %}
 
-    </div>
-    <!-- Theme Switching Script -->
-    <script>
-        const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
-        const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
-        const bodyElement = document.body; // Use document.body
+            </div> </div> </div> <script>
+        // Example: Theme switching can be handled globally by the script in sidebar.html
+        // If you need page-specific theme logic, add it here.
+        // const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+        // const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+        // const bodyElement = document.body;
 
-        function setTheme(theme) {
-            bodyElement.setAttribute('data-theme', theme); // Set on body
-            localStorage.setItem('theme', theme);
-            if (theme === 'dark') {
-                toggleSwitch.checked = true;
-            } else {
-                toggleSwitch.checked = false;
-            }
-        }
+        // function setTheme(theme) {
+        //     bodyElement.setAttribute('data-theme', theme);
+        //     localStorage.setItem('theme', theme);
+        // }
+        // // Initialize theme based on saved preference or default
+        // setTheme(currentTheme || 'light');
 
-        if (currentTheme) {
-            setTheme(currentTheme);
-        } else {
-            // Default to light theme if no preference saved
-            setTheme('light');
-        }
-
-        function switchTheme(e) {
-            if (e.target.checked) {
-                setTheme('dark');
-            } else {
-                setTheme('light');
-            }
-        }
-
-        toggleSwitch.addEventListener('change', switchTheme, false);
-
-        // Ensure the toggle reflects the initial theme on load
-        if (currentTheme === 'dark') {
-            toggleSwitch.checked = true;
-        } else {
-            toggleSwitch.checked = false; // Ensure it's unchecked for light theme
-        }
     </script>
-    <!-- End Theme Switching Script -->
 </body>
 </html>

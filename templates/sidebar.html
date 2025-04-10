@@ -1,7 +1,6 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='sidebar_theme_toggle.css') }}">
 
 <div id="sidebar" class="sidebar collapsed">
-    <button id="sidebarToggle" style="background:none;border:none;color:var(--glass-text);font-size:20px;cursor:pointer;margin-bottom:15px;">☰</button>
 
     <!-- Creative SVG Slider Toggle -->
     <div class="theme-switch-wrapper" style="margin-bottom:15px;">
@@ -17,21 +16,17 @@
     </div>
     <h3>Navigation</h3>
     <ul>
-        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class='bx bx-home icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-home icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Dashboard</span></a></li>
-        <li><a href="/view_students" class="{% if request.path == '/view_students' %}active{% endif %}"><i class='bx bx-group icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-user icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Students</span></a></li>
-        <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class='bx bx-cog icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-wrench icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Configure</span></a></li>
-        <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class='bx bx-video icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-play icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Live Feed</span></a></li>
-        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class='bx bx-clipboard icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-list-ul icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Seen Logs</span></a></li>
-        <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class='bx bx-log-out icon-expanded' style="font-size:20px;color:inherit;"></i><i class='bx bx-x icon-collapsed' style="font-size:20px;color:inherit;"></i> <span>Logout</span></a></li>
+        <li><a href="/" class="{% if request.path == '/' %}active{% endif %}"><i class='bx bx-home icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 9.5L12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1V9.5z"/></svg> <span>Dashboard</span></a></li>
+        <li><a href="/register" class="{% if request.path == '/register' %}active{% endif %}"><i class='bx bx-user-plus icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M15 14c2.7 0 5 2.3 5 5v1H4v-1c0-2.7 2.3-5 5-5h6zm-3-2a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM20 8h-2V6h-2V4h2V2h2v2h2v2h-2v2z"/></svg> <span>Register</span></a></li>
+        <li><a href="/attendance" class="{% if request.path == '/attendance' %}active{% endif %}"><i class='bx bx-calendar-check icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg> <span>Attendance</span></a></li>
+        <li><a href="/view_students" class="{% if request.path == '/view_students' %}active{% endif %}"><i class='bx bx-group icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg> <span>Students</span></a></li>
+        <li><a href="/configure" class="{% if request.path == '/configure' %}active{% endif %}"><i class='bx bx-cog icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z"/><path d="M19.4 15a7.5 7.5 0 0 0 0-6l2-3.5-3.5-2-3.5 2a7.5 7.5 0 0 0-6 0l-3.5-2-3.5 2 2 3.5a7.5 7.5 0 0 0 0 6l-2 3.5 3.5 2 3.5-2a7.5 7.5 0 0 0 6 0l3.5 2 3.5-2-2-3.5z" fill="none" stroke="currentColor" stroke-width="2"/></svg> <span>Configure</span></a></li>
+        <li><a href="/live_feed" class="{% if request.path == '/live_feed' %}active{% endif %}"><i class='bx bx-video icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> <span>Live Feed</span></a></li>
+        <li><a href="/seen_log" class="{% if request.path == '/seen_log' %}active{% endif %}"><i class='bx bx-clipboard icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="4" y="5" width="16" height="2"/><rect x="4" y="11" width="16" height="2"/><rect x="4" y="17" width="16" height="2"/></svg> <span>Seen Logs</span></a></li>
+        <li><a href="/logout" class="{% if request.path == '/logout' %}active{% endif %}"><i class='bx bx-log-out icon-expanded' style="font-size:20px;color:inherit;"></i><svg class="icon-collapsed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M16 17l5-5-5-5v3H9v4h7v3z"/><path d="M4 4h9v2H4v12h9v2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg> <span>Logout</span></a></li>
     </ul>
 </div>
 
-<script>
-document.getElementById('sidebarToggle').onclick = function() {
-    document.getElementById('sidebar').classList.toggle('collapsed');
-    document.querySelector('.main-content').classList.toggle('expanded');
-};
-</script>
 
 <script>
   const themeToggleCheckbox = document.getElementById('themeToggle');
@@ -61,6 +56,3 @@ document.getElementById('sidebarToggle').onclick = function() {
   const savedTheme = localStorage.getItem('theme') || 'dark';
   setTheme(savedTheme);
 </script>
-<div class="main-content">
-    <!-- Main content starts here -->
-</div>
