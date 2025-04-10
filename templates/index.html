@@ -14,6 +14,7 @@
     <!-- Link to the glass theme stylesheet -->
 </head>
 <body data-theme="light">
+    <div class="hamburger">&#9776;</div>
     <div class="main-content">
         <div class="container glass-container">
             <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo">
@@ -60,6 +61,13 @@
         if (currentTheme) {
             document.body.setAttribute('data-theme', currentTheme);
         }
+    const hamburger = document.querySelector('.hamburger');
+    const sidebar = document.querySelector('.sidebar');
+    if(hamburger && sidebar){
+        hamburger.onclick = function() {
+            sidebar.classList.toggle('active');
+        }
+    }
     </script>
 </body>
 </html>

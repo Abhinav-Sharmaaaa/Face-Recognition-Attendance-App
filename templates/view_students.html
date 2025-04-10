@@ -55,48 +55,50 @@
         </div>
 
         {% if students %}
-        <table class="attendance-table">
-            <thead>
-                <tr>
-                    <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
-                            Name {% if sort_by == 'name' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
-                            Branch {% if sort_by == 'branch' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
-                        </a>
-                    </th>
-                    <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
-                            Registered At {% if sort_by == 'registered_at' or not sort_by %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
-                        </a>
-                    </th>
-                     <th>
-                        <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='role', sort_order='desc' if sort_by == 'role' and sort_order == 'asc' else 'asc') }}">
-                            Role {% if sort_by == 'role' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
-                        </a>
-                    </th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
-                <tr>
-                    <td>{{ student.name }}</td>
-                    <td>{{ student.branch if student.branch else 'N/A' }}</td>
-                    <td>{{ student.registered_at_str }}</td>
-                    <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
-                    <td>
-                        <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
-                            <button type="submit">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="attendance-table">
+                <thead>
+                    <tr>
+                        <th>
+                            <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='name', sort_order='desc' if sort_by == 'name' and sort_order == 'asc' else 'asc') }}">
+                                Name {% if sort_by == 'name' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='branch', sort_order='desc' if sort_by == 'branch' and sort_order == 'asc' else 'asc') }}">
+                                Branch {% if sort_by == 'branch' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                            </a>
+                        </th>
+                        <th>
+                            <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='registered_at', sort_order='desc' if sort_by == 'registered_at' and sort_order == 'asc' else 'asc') }}">
+                                Registered At {% if sort_by == 'registered_at' or not sort_by %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                            </a>
+                        </th>
+                         <th>
+                            <a href="{{ url_for('view_students', search=search_query, role_filter=role_filter, branch_filter=branch_filter, sort_by='role', sort_order='desc' if sort_by == 'role' and sort_order == 'asc' else 'asc') }}">
+                                Role {% if sort_by == 'role' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
+                            </a>
+                        </th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student.name }}</td>
+                        <td>{{ student.branch if student.branch else 'N/A' }}</td>
+                        <td>{{ student.registered_at_str }}</td>
+                        <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
+                        <td>
+                            <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
+                                <button type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
         <p class="no-students">No students found matching your criteria.</p>
         {% endif %}

@@ -398,6 +398,48 @@ form label {
 input[type="text"], input[type="password"], select {
     width: 100%;
     padding: 12px 15px;
+}
+
+@media (max-width: 768px) {
+    .btn-option {
+        width: 90%;
+        height: auto;
+        padding: 12px;
+        font-size: 1rem;
+    }
+    .welcome-text {
+        font-size: 1.8rem;
+    }
+    .sub-text {
+        font-size: 1rem;
+    }
+    .logo {
+        width: 150px;
+    }
+    .theme-switch-wrapper {
+        top: 10px;
+        right: 10px;
+        transform: scale(0.8);
+    }
+}
+
+@media (max-width: 480px) {
+    .btn-option {
+        width: 100%;
+        height: auto;
+        padding: 12px;
+    }
+    .welcome-text {
+        font-size: 1.5rem;
+    }
+    .sub-text {
+        font-size: 0.9rem;
+    }
+    .logo {
+        width: 120px;
+    }
+}
+input[type="text"], input[type="password"], select {
     background-color: var(--input-bg); /* Use variable */
     border: 1px solid var(--input-border); /* Use variable */
     margin: 5px 0 15px 0;
@@ -456,6 +498,27 @@ a {
     color: var(--glass-link); /* Use glass link color as default */
     text-decoration: none;
     font-weight: 500;
+}
+
+/* Responsive table container */
+.table-responsive {
+  display: block; /* Ensure block behavior */
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+@media (max-width: 768px) {
+  .table-responsive table th,
+  .table-responsive table td {
+    font-size: 0.9rem;
+    padding: 6px;
+  }
 }
 
 a:hover {
@@ -1084,4 +1147,8 @@ select option:hover {
 .themed-select option {
     background-color: var(--input-bg);
     color: var(--input-text);
+/* Make logout button text white on index page */
+.button-container .btn-danger {
+    color: #fff !important;
+}
 }

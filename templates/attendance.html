@@ -24,30 +24,32 @@
                 <a href="{{ url_for('export_attendance_excel') }}" class="back-link" style="margin-left: 10px;">Export to Excel</a>
 
                 {% if attendance_records %}
-                    <table class="attendance-table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Branch/Dept</th>
-                                <th>Role</th>
-                                <th>Date</th>
-                                <th>Arriving Time</th>
-                                <th>Leaving Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in attendance_records %}
-                            <tr>
-                                <td>{{ record.name }}</td>
-                                <td>{{ record.branch | default('N/A') }}</td>
-                                <td>{{ record.role | default('N/A') | title }}</td>
-                                <td>{{ record.date }}</td>
-                                <td>{{ record.arriving_time }}</td>
-                                <td>{{ record.leaving_time }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="attendance-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Branch/Dept</th>
+                                    <th>Role</th>
+                                    <th>Date</th>
+                                    <th>Arriving Time</th>
+                                    <th>Leaving Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in attendance_records %}
+                                <tr>
+                                    <td>{{ record.name }}</td>
+                                    <td>{{ record.branch | default('N/A') }}</td>
+                                    <td>{{ record.role | default('N/A') | title }}</td>
+                                    <td>{{ record.date }}</td>
+                                    <td>{{ record.arriving_time }}</td>
+                                    <td>{{ record.leaving_time }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% else %}
                     <p class="no-records">No attendance records found for today.</p>
                 {% endif %}

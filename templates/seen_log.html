@@ -28,85 +28,89 @@
 
     <!-- Attendance report removed -->
 
-    <table class="attendance-table"> <!-- Added theme class -->
-        <thead>
-            <tr>
-                <th>Type</th>
-                <th>Name / ID</th>
-                <th>Timestamp</th>
-                <th>Status at Log</th>
-                <th>Image (if unknown)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% if grouped_logs %}
-                {% for identifier, log_list in grouped_logs.items() %}
-                    {% if log_list|length == 1 %}
-                        {# Display single log entry as a normal row #}
-                        {% set log = log_list[0] %}
-                        <tr>
-                            <td>{{ log.type }}</td>
-                            <td>{{ log.name if log.type == 'known_sighting' else 'Unknown' }}</td>
-                            <td>{{ log.timestamp_str }}</td>
-                            <td>{{ log.status_at_log }}</td>
-                            <td>
-                                {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
-                                    <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image class -->
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% else %}
-                        {# Display multiple log entries within a dropdown #}
-                        <tr>
-                            <td colspan="5"> {# Span all columns for the details element #}
-                                <details>
-                                    <summary>
-                                        <strong>{{ identifier }}</strong> ({{ log_list|length }} entries) - Latest: {{ log_list[0].timestamp_str }}
-                                        <!-- Displaying first log's type for context -->
-                                        | Type: {{ log_list[0].type }}
-                                    </summary>
-                                    <table class="attendance-table"> <!-- Use theme class for nested table -->
-                                        <thead>
-                                            <tr>
-                                                <th>Timestamp</th>
-                                                <th>Status at Log</th>
-                                                <th>Image (if unknown)</th>
-                                                <th>Type</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for log in log_list %}
-                                            <tr>
-                                                <td>{{ log.timestamp_str }}</td>
-                                                <td>{{ log.status_at_log }}</td>
-                                                <td>
-                                                    {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
-                                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image-nested class -->
-                                                    {% else %}
-                                                        N/A
-                                                    {% endif %}
-                                                </td>
-                                                 <td>{{ log.type }}</td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
-                                </details>
-                            </td>
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            {% else %}
+    <div class="table-responsive">
+        <table class="attendance-table"> <!-- Added theme class -->
+            <thead>
                 <tr>
-                    <td colspan="5">No log entries found.</td> <!-- Removed inline style -->
+                    <th>Type</th>
+                    <th>Name / ID</th>
+                    <th>Timestamp</th>
+                    <th>Status at Log</th>
+                    <th>Image (if unknown)</th>
                 </tr>
-            {% endif %}
+            </thead>
+            <tbody>
+                {% if grouped_logs %}
+                    {% for identifier, log_list in grouped_logs.items() %}
+                        {% if log_list|length == 1 %}
+                            {# Display single log entry as a normal row #}
+                            {% set log = log_list[0] %}
+                            <tr>
+                                <td>{{ log.type }}</td>
+                                <td>{{ log.name if log.type == 'known_sighting' else 'Unknown' }}</td>
+                                <td>{{ log.timestamp_str }}</td>
+                                <td>{{ log.status_at_log }}</td>
+                                <td>
+                                    {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
+                                        <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image class -->
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            {# Display multiple log entries within a dropdown #}
+                            <tr>
+                                <td colspan="5"> {# Span all columns for the details element #}
+                                    <details>
+                                        <summary>
+                                            <strong>{{ identifier }}</strong> ({{ log_list|length }} entries) - Latest: {{ log_list[0].timestamp_str }}
+                                            <!-- Displaying first log's type for context -->
+                                            | Type: {{ log_list[0].type }}
+                                        </summary>
+                                        <div class="table-responsive"> <!-- Added wrapper for responsiveness -->
+                                            <table class="attendance-table"> <!-- Use theme class for nested table -->
+                                            <thead>
+                                                <tr>
+                                                    <th>Timestamp</th>
+                                                    <th>Status at Log</th>
+                                                    <th>Image (if unknown)</th>
+                                                    <th>Type</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for log in log_list %}
+                                                <tr>
+                                                    <td>{{ log.timestamp_str }}</td>
+                                                    <td>{{ log.status_at_log }}</td>
+                                                    <td>
+                                                        {% if (log.type == 'unknown_sighting' or log.type == 'processing_error') and log.face_image_base64 %}
+                                                            <img src="data:image/jpeg;base64,{{ log.face_image_base64 }}" alt="Logged Face"> <!-- Removed log-image-nested class -->
+                                                        {% else %}
+                                                            N/A
+                                                        {% endif %}
+                                                    </td>
+                                                     <td>{{ log.type }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            </table>
+                                        </div> <!-- Close responsive wrapper -->
+                                    </details>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="5">No log entries found.</td> <!-- Removed inline style -->
+                    </tr>
+                {% endif %}
 
 
-        </tbody>
-    </table>
+            </tbody>
+        </table>
+    </div>
 
 
     <a href="{{ url_for('index') }}" class="back-link">Back to Admin Dashboard</a>
