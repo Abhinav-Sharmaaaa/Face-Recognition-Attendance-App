@@ -13,60 +13,78 @@
 <body> <!-- Removed glass-container from body -->
     {% include 'sidebar.html' %}
     <!-- Removed outer container div -->
-        <h1>Configure Settings</h1>
-
+        <h1>Configuration</h1>
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
 
-        <div class="glass-container"> <!-- Added glass container for main content -->
+        <div class="glass-container">
 
         <form method="POST" action="{{ url_for('configure') }}">
-            <div> <!-- Removed Bootstrap classes -->
-                <input type="checkbox" id="enable_stop_time" name="enable_stop_time" {% if stop_time_enabled %}checked{% endif %}>
-                <label for="enable_stop_time">Enable Automatic Live Feed Stop Time</label>
-            </div>
-            <!-- Stop Time Input -->
-            <div> <!-- Removed Bootstrap classes -->
-                <label for="stop_time">Stop Time:</label>
-                <div> <!-- Removed Bootstrap classes -->
-                    <input type="time" id="stop_time" name="stop_time" value="{{ current_stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
-                    <div>Set the time when the live feed should automatically stop.</div> <!-- Removed form-text class -->
+            <fieldset style="margin-bottom:1.5em;">
+                <legend style="font-weight:600;">Live Feed Stop Time</legend>
+                <div>
+                    <input type="checkbox" id="enable_stop_time" name="enable_stop_time" {% if stop_time_enabled %}checked{% endif %}>
+                    <label for="enable_stop_time"><b>Enable Automatic Live Feed Stop Time</b></label>
+                    <span title="If enabled, the live feed will stop automatically at the specified time." style="cursor:help;">&#9432;</span>
                 </div>
-            </div>
+                <div style="margin-top:0.5em;">
+                    <label for="stop_time"><b>Stop Time:</b></label>
+                    <input type="time" id="stop_time" name="stop_time" value="{{ current_stop_time }}" {% if not stop_time_enabled %}disabled{% endif %}>
+                    <div style="font-size:0.95em;color:#555;">Set the time when the live feed should automatically stop (e.g., 18:00 for 6:00 PM).</div>
+                </div>
+            </fieldset>
 
-            <hr> <!-- Separator -->
-
-            <!-- Unknown Face Timeout Setting -->
-            <div> <!-- Removed Bootstrap classes -->
-                <label for="unknown_face_timeout">Unknown Face Timeout (seconds):</label>
-                <div> <!-- Removed Bootstrap classes -->
+            <fieldset style="margin-bottom:1.5em;">
+                <legend style="font-weight:600;">Unknown Face Settings</legend>
+                <div>
+                    <label for="unknown_face_timeout"><b>Unknown Face Timeout (seconds):</b></label>
                     <input type="number" id="unknown_face_timeout" name="unknown_face_timeout"
                            value="{{ unknown_face_timeout | default(5) }}" min="1" required>
-                    <div>How long (in seconds) the system should wait seeing an unrecognized face before marking it as "Unknown". Minimum 1 second.</div> <!-- Removed form-text class -->
+                    <span title="How long (in seconds) the system should wait after seeing an unrecognized face before marking it as 'Unknown'. Minimum 1 second." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Example: 5 = wait 5 seconds before marking as unknown.</div>
                 </div>
-            </div>
-
-            <hr> <!-- Separator -->
-
-            <!-- Unknown Log Interval Setting -->
-            <div> <!-- Removed Bootstrap classes -->
-                <label for="unknown_log_interval_seconds">Unknown Log Interval (seconds):</label>
-                <div> <!-- Removed Bootstrap classes -->
+                <div style="margin-top:0.5em;">
+                    <label for="unknown_log_interval_seconds"><b>Unknown Log Interval (seconds):</b></label>
                     <input type="number" id="unknown_log_interval_seconds" name="unknown_log_interval_seconds"
                            value="{{ unknown_log_interval_seconds | default(60) }}" min="1" required>
-                    <div>How long (in seconds) to wait before logging the same unknown person again. Minimum 1 second.</div> <!-- Removed form-text class -->
+                    <span title="How long (in seconds) to wait before logging the same unknown person again. Minimum 1 second." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Example: 60 = log the same unknown person at most once per minute.</div>
                 </div>
-            </div>
+            </fieldset>
 
-            <hr> <!-- Separator -->
+            <fieldset style="margin-bottom:1.5em;">
+                <legend style="font-weight:600;">Performance & Quality</legend>
+                <div>
+                    <label for="process_every_n_frames"><b>Frame Skip (process every Nth frame):</b></label>
+                    <input type="number" id="process_every_n_frames" name="process_every_n_frames"
+                           value="{{ process_every_n_frames | default(10) }}" min="1" required>
+                    <span title="Increase to reduce system load. For example, 10 = process every 10th frame." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Higher values reduce CPU usage but may miss some faces.</div>
+                </div>
+                <div style="margin-top:0.5em;">
+                    <label for="live_feed_sleep"><b>Live Feed Sleep (seconds):</b></label>
+                    <input type="number" step="0.01" id="live_feed_sleep" name="live_feed_sleep"
+                           value="{{ live_feed_sleep | default(0.1) }}" min="0" required>
+                    <span title="Increase to reduce CPU/network usage. 0.1 = 100ms between frames." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Increase for less frequent updates, decrease for smoother video.</div>
+                </div>
+                <div style="margin-top:0.5em;">
+                    <label for="jpeg_quality"><b>JPEG Quality (1-100):</b></label>
+                    <input type="number" id="jpeg_quality" name="jpeg_quality"
+                           value="{{ jpeg_quality | default(60) }}" min="1" max="100" required>
+                    <span title="Lower value = smaller, faster, but less clear. 60 is a good balance." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Increase for better image quality, decrease for faster performance.</div>
+                </div>
+            </fieldset>
 
-            <!-- Academic Year Setting -->
-
-            <button type="submit">Save All Settings</button> <!-- Removed Bootstrap classes -->
+            <button type="submit" style="font-size:1.1em;padding:0.5em 1.5em;">Save All Settings</button>
         </form>
 
         <!-- Camera Management Section -->
-        <h2>Manage ONVIF Cameras</h2>
-        <table style="width:100%; margin-bottom: 1em;">
+        <h2 style="margin-top:2em;">Manage ONVIF Cameras</h2>
+        <div style="font-size:1em;color:#444;margin-bottom:0.5em;">
+            View, add, or remove ONVIF-compatible cameras for live feed monitoring. Each camera requires its network details and RTSP URL.
+        </div>
+        <table style="width:100%; margin-bottom: 1em; border-collapse:collapse;">
             <thead>
                 <tr>
                     <th>Name</th>
@@ -74,6 +92,7 @@
                     <th>Port</th>
                     <th>Username</th>
                     <th>RTSP URL</th>
+                    <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -86,9 +105,24 @@
                     <td>{{ cam.username }}</td>
                     <td style="font-size:0.9em;word-break:break-all;">{{ cam.rtsp_url }}</td>
                     <td>
+                        {% if cam.disabled %}
+                            <span style="color:#b71c1c;font-weight:600;">Disabled</span>
+                        {% else %}
+                            <span style="color:#388e3c;font-weight:600;">Enabled</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('configure') }}" style="display:inline;">
+                            <input type="hidden" name="toggle_camera" value="{{ cam.id }}">
+                            {% if cam.disabled %}
+                                <button type="submit" title="Enable this camera" style="color:#388e3c;">Enable</button>
+                            {% else %}
+                                <button type="submit" title="Disable this camera" style="color:#b71c1c;">Disable</button>
+                            {% endif %}
+                        </form>
                         <form method="POST" action="{{ url_for('configure') }}" style="display:inline;">
                             <input type="hidden" name="remove_camera" value="{{ cam.id }}">
-                            <button type="submit" onclick="return confirm('Remove this camera?');">Remove</button>
+                            <button type="submit" onclick="return confirm('Remove this camera?');" title="Remove this camera">&#128465; Remove</button>
                         </form>
                     </td>
                 </tr>
@@ -97,37 +131,46 @@
                 {% endfor %}
             </tbody>
         </table>
-        <h3>Add New Camera</h3>
-        <form method="POST" action="{{ url_for('configure') }}">
+        <h3 style="margin-top:1.5em;">Add New Camera</h3>
+        <form method="POST" action="{{ url_for('configure') }}" style="margin-bottom:1em;">
             <input type="hidden" name="add_camera" value="1">
-            <div>
-                <label>Name:</label>
-                <input type="text" name="camera_name" required>
-            </div>
-            <div>
-                <label>IP:</label>
-                <input type="text" name="camera_ip" required>
-            </div>
-            <div>
-                <label>Port:</label>
-                <input type="number" name="camera_port" value="80" required>
-            </div>
-            <div>
-                <label>Username:</label>
-                <input type="text" name="camera_username" required>
-            </div>
-            <div>
-                <label>Password:</label>
-                <input type="password" name="camera_password" required>
-            </div>
-            <div>
-                <label>RTSP URL:</label>
-                <input type="text" name="camera_rtsp_url" required>
-            </div>
-            <button type="submit">Add Camera</button>
+            <fieldset style="border:1px solid #ccc; padding:1em; border-radius:6px;">
+                <legend style="font-weight:500;">Camera Details</legend>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_name"><b>Name:</b></label>
+                    <input type="text" id="camera_name" name="camera_name" required>
+                    <span title="A friendly name for this camera (e.g., 'Front Gate')." style="cursor:help;">&#9432;</span>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_ip"><b>IP Address:</b></label>
+                    <input type="text" id="camera_ip" name="camera_ip" required>
+                    <span title="The local network IP address of the camera (e.g., 192.168.1.100)." style="cursor:help;">&#9432;</span>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_port"><b>Port:</b></label>
+                    <input type="number" id="camera_port" name="camera_port" value="80" required>
+                    <span title="The port used for camera access (default is 80 for most cameras)." style="cursor:help;">&#9432;</span>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_username"><b>Username:</b></label>
+                    <input type="text" id="camera_username" name="camera_username" required>
+                    <span title="The username for camera login." style="cursor:help;">&#9432;</span>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_password"><b>Password:</b></label>
+                    <input type="password" id="camera_password" name="camera_password" required>
+                    <span title="The password for camera login." style="cursor:help;">&#9432;</span>
+                </div>
+                <div style="margin-bottom:0.5em;">
+                    <label for="camera_rtsp_url"><b>RTSP URL:</b></label>
+                    <input type="text" id="camera_rtsp_url" name="camera_rtsp_url" required>
+                    <span title="The RTSP stream URL for this camera. Refer to your camera's manual for the correct format." style="cursor:help;">&#9432;</span>
+                </div>
+                <button type="submit" style="margin-top:0.5em;">Add Camera</button>
+            </fieldset>
         </form>
-         <div> <!-- Removed button-container class -->
-             <a href="{{ url_for('index') }}">Back to Home</a> <!-- Removed back-button class -->
+        <div style="margin-top:1em;">
+            <a href="{{ url_for('index') }}" style="font-size:1.1em; color:#1976d2; text-decoration:underline; font-weight:500;">&#8592; Back to Home</a>
         </div>
        </div> <!-- Close glass-container -->
    <!-- Removed closing tag for outer container div -->

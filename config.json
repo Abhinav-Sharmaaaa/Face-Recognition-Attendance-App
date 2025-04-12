@@ -3,5 +3,10 @@
     "stop_time_enabled": false,
     "unknown_face_timeout": 3,
     "unknown_log_interval_seconds": 60,
-    "academic_year": ""
+    "academic_year": "",
+    "process_every_n_frames": 1,
+    "live_feed_sleep": 0.0,
+    "jpeg_quality": 30,
+    "resize_width": 640,
+    "resize_height": 360
 }

@@ -10,7 +10,7 @@
 <body data-theme="light"> <div class="layout"> {% include 'sidebar.html' %} <div class="content"> <div class="container glass-container"> <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
                 <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
                 <!-- Filter Form -->
-                <form method="get" action="{{ url_for('attendance_page') }}" style="margin-bottom: 20px; display: flex; gap: 1em; align-items: center;">
+                <form method="post" action="{{ url_for('attendance_page') }}" style="margin-bottom: 20px; display: flex; gap: 1em; align-items: center;">
                     <label for="branch_filter">Branch:</label>
                     <select name="branch_filter" id="branch_filter">
                         <option value="">Select Branch</option>
@@ -31,7 +31,10 @@
                         <option value="N/A" {% if academic_year_filter == "N/A" %}selected{% endif %}>N/A</option>
                     </select>
 
-                    <button type="submit">Apply Filter</button>
+                    <label for="attendance_date">Date:</label>
+                    <input type="date" id="attendance_date" name="attendance_date" value="{{ selected_date if selected_date else today_date }}">
+
+                    <button type="submit">Generate Attendance</button>
                 </form>
 
 
