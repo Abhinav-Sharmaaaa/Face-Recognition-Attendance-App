@@ -74,9 +74,18 @@
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
         <!-- End Theme Toggle Switch -->
     <h1 class="live-feed-text">Live Feed</h1>
-    <div class="video-wrapper">
-      <img src="{{ url_for('video_feed') }}" alt="Live video stream" />
-    </div>
+    {% if cameras and cameras|length > 0 %}
+        {% for cam in cameras %}
+        <div class="video-wrapper" style="margin-bottom: 32px;">
+            <h3 style="color:#fff; text-shadow:1px 1px 4px rgba(0,0,0,0.7);">{{ cam.name }}</h3>
+            <img src="{{ url_for('video_feed', camera_id=cam.id) }}" alt="Live video stream for {{ cam.name }}" />
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="video-wrapper">
+            <p style="color:#fff;">No cameras configured.</p>
+        </div>
+    {% endif %}
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Theme Switching Script -->

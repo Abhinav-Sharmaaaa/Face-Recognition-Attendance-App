@@ -32,6 +32,16 @@
                         </select><br>
                     </div>
 
+                    <div id="academicYearDiv">
+                        <label for="academicYearSelect">Academic Year (Year of Study):</label>
+                        <select name="academic_year" id="academicYearSelect" class="themed-select">
+                            <option value="">Select Academic Year</option>
+                            <option value="1st">1st</option>
+                            <option value="2nd">2nd</option>
+                            <option value="3rd">3rd</option>
+                        </select><br>
+                    </div>
+
                     <div>
                         <label for="photo">Capture Photo:</label>
                         <video id="video" width="320" height="240" autoplay></video>
@@ -106,6 +116,29 @@
         // Add event listener
         roleSelect.addEventListener('change', toggleBranchField);
         // --- End of added JavaScript ---
+        // --- Academic Year field show/hide logic ---
+        const academicYearDiv = document.getElementById('academicYearDiv');
+        const academicYearSelect = document.getElementById('academicYearSelect');
+
+        function toggleAcademicYearField() {
+            const selectedRole = roleSelect.value;
+            if (selectedRole === 'Student') {
+                academicYearDiv.style.display = 'block';
+                academicYearSelect.required = true;
+            } else {
+                academicYearDiv.style.display = 'none';
+                academicYearSelect.required = false;
+                academicYearSelect.value = '';
+            }
+        }
+
+        // Initial check on page load
+        toggleAcademicYearField();
+
+        // Add event listener
+        roleSelect.addEventListener('change', toggleAcademicYearField);
+        // --- End of Academic Year field logic ---
+        
 
 
         // Theme switching logic can be added here if needed,

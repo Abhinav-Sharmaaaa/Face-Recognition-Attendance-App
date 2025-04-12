@@ -2,5 +2,6 @@
     "stop_time": "14:56",
     "stop_time_enabled": false,
     "unknown_face_timeout": 3,
-    "unknown_log_interval_seconds": 60
+    "unknown_log_interval_seconds": 60,
+    "academic_year": ""
 }

@@ -9,16 +9,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}"> </head>
 <body data-theme="light"> <div class="layout"> {% include 'sidebar.html' %} <div class="content"> <div class="container glass-container"> <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
                 <h1>Daily Attendance - {{ attendance_records[0].date if attendance_records else today_date }}</h1>
+                <!-- Filter Form -->
+                <form method="get" action="{{ url_for('attendance_page') }}" style="margin-bottom: 20px; display: flex; gap: 1em; align-items: center;">
+                    <label for="branch_filter">Branch:</label>
+                    <select name="branch_filter" id="branch_filter">
+                        <option value="C.S.E." {% if branch_filter == "C.S.E." %}selected{% endif %}>C.S.E.</option>
+                        <option value="E.C.E." {% if branch_filter == "E.C.E." %}selected{% endif %}>E.C.E.</option>
+                        <option value="M.E." {% if branch_filter == "M.E." %}selected{% endif %}>M.E.</option>
+                        <option value="N/A" {% if branch_filter == "N/A" %}selected{% endif %}>N/A</option>
+                    </select>
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        <ul class="flash-messages">
-                        {% for category, message in messages %}
-                            <li class="{{ category }}">{{ message }}</li>
-                        {% endfor %}
-                        </ul>
-                    {% endif %}
-                {% endwith %}
+                    <label for="academic_year_filter">Academic Year:</label>
+                    <select name="academic_year_filter" id="academic_year_filter">
+                        <option value="1st" {% if academic_year_filter == "1st" %}selected{% endif %}>1st</option>
+                        <option value="2nd" {% if academic_year_filter == "2nd" %}selected{% endif %}>2nd</option>
+                        <option value="3rd" {% if academic_year_filter == "3rd" %}selected{% endif %}>3rd</option>
+                        <option value="N/A" {% if academic_year_filter == "N/A" %}selected{% endif %}>N/A</option>
+                    </select>
+
+                    <button type="submit">Apply Filter</button>
+                </form>
+
 
                 <a href="{{ url_for('index') }}" class="back-link">&larr; Back to Dashboard</a>
                 <a href="{{ url_for('export_attendance_excel') }}" class="back-link" style="margin-left: 10px;">Export to Excel</a>
@@ -30,7 +41,7 @@
                                 <tr>
                                     <th>Name</th>
                                     <th>Branch/Dept</th>
-                                    <th>Role</th>
+                                    <th>Academic Year</th>
                                     <th>Date</th>
                                     <th>Arriving Time</th>
                                     <th>Leaving Time</th>
@@ -41,7 +52,7 @@
                                 <tr>
                                     <td>{{ record.name }}</td>
                                     <td>{{ record.branch | default('N/A') }}</td>
-                                    <td>{{ record.role | default('N/A') | title }}</td>
+                                    <td>{{ record.academic_year | default('N/A') }}</td>
                                     <td>{{ record.date }}</td>
                                     <td>{{ record.arriving_time }}</td>
                                     <td>{{ record.leaving_time }}</td>

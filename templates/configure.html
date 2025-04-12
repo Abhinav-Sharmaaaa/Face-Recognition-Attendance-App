@@ -18,16 +18,6 @@
         <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
 
         <div class="glass-container"> <!-- Added glass container for main content -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="flash {{ category }}"> <!-- Use theme flash class, removed Bootstrap classes -->
-                        {{ message }}
-                        <!-- Removed Bootstrap close button -->
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
 
         <form method="POST" action="{{ url_for('configure') }}">
             <div> <!-- Removed Bootstrap classes -->
@@ -69,7 +59,72 @@
 
             <hr> <!-- Separator -->
 
+            <!-- Academic Year Setting -->
+
             <button type="submit">Save All Settings</button> <!-- Removed Bootstrap classes -->
+        </form>
+
+        <!-- Camera Management Section -->
+        <h2>Manage ONVIF Cameras</h2>
+        <table style="width:100%; margin-bottom: 1em;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>IP</th>
+                    <th>Port</th>
+                    <th>Username</th>
+                    <th>RTSP URL</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cam in cameras %}
+                <tr>
+                    <td>{{ cam.name }}</td>
+                    <td>{{ cam.ip }}</td>
+                    <td>{{ cam.port }}</td>
+                    <td>{{ cam.username }}</td>
+                    <td style="font-size:0.9em;word-break:break-all;">{{ cam.rtsp_url }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('configure') }}" style="display:inline;">
+                            <input type="hidden" name="remove_camera" value="{{ cam.id }}">
+                            <button type="submit" onclick="return confirm('Remove this camera?');">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align:center;">No cameras configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h3>Add New Camera</h3>
+        <form method="POST" action="{{ url_for('configure') }}">
+            <input type="hidden" name="add_camera" value="1">
+            <div>
+                <label>Name:</label>
+                <input type="text" name="camera_name" required>
+            </div>
+            <div>
+                <label>IP:</label>
+                <input type="text" name="camera_ip" required>
+            </div>
+            <div>
+                <label>Port:</label>
+                <input type="number" name="camera_port" value="80" required>
+            </div>
+            <div>
+                <label>Username:</label>
+                <input type="text" name="camera_username" required>
+            </div>
+            <div>
+                <label>Password:</label>
+                <input type="password" name="camera_password" required>
+            </div>
+            <div>
+                <label>RTSP URL:</label>
+                <input type="text" name="camera_rtsp_url" required>
+            </div>
+            <button type="submit">Add Camera</button>
         </form>
          <div> <!-- Removed button-container class -->
              <a href="{{ url_for('index') }}">Back to Home</a> <!-- Removed back-button class -->

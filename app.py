@@ -1,5 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, Response, flash
 import os
+import logging
+
+# Ensure debug messages are shown in the console
+logging.basicConfig(level=logging.DEBUG)
 from datetime import datetime, timedelta, time
 import pytz
 from collections import defaultdict
@@ -17,6 +21,7 @@ from werkzeug.utils import secure_filename
 from bson.objectid import ObjectId
 import json
 import openpyxl
+from markupsafe import Markup
 
 load_dotenv()
 
@@ -93,7 +98,7 @@ def save_config(config_data):
         logging.info(f"Configuration saved to {CONFIG_FILE}")
     except Exception as e:
         logging.error(f"Error writing config file {CONFIG_FILE}: {e}")
-        flash("Error saving configuration.", "error")
+        # flash("Error saving configuration.", "error")
 
 try:
     face_recognizer = cv2.FaceRecognizerSF.create(
@@ -114,6 +119,131 @@ except AttributeError:
 known_face_data = {}
 known_face_embeddings_list = []
 known_face_names = []
+
+CAMERAS_FILE = 'cameras.json'
+
+def load_cameras():
+    cameras = []
+    if os.path.exists(CAMERAS_FILE):
+        try:
+            with open(CAMERAS_FILE, 'r') as f:
+                cameras = json.load(f)
+        except Exception as e:
+            logging.error(f"Error reading cameras file {CAMERAS_FILE}: {e}")
+            cameras = []
+    # Ensure PC Webcam is always present
+    has_webcam = any(
+        (str(cam.get('id')) == "0" or str(cam.get('rtsp_url')) == "0" or cam.get('rtsp_url') == 0)
+        for cam in cameras
+    )
+    if not has_webcam:
+        cameras.insert(0, {
+            "id": 0,
+            "name": "PC Webcam",
+            "ip": "",
+            "port": "",
+            "username": "",
+            "password": "",
+            "rtsp_url": 0
+        })
+    return cameras
+
+def save_cameras(cameras):
+    try:
+        with open(CAMERAS_FILE, 'w') as f:
+            json.dump(cameras, f, indent=4)
+        logging.info(f"Cameras saved to {CAMERAS_FILE}")
+    except Exception as e:
+        logging.error(f"Error writing cameras file {CAMERAS_FILE}: {e}")
+
+@app.route('/configure', methods=['GET', 'POST'])
+def configure():
+    # Admin check
+    if session.get('user_type') != 'admin':
+        # flash("Unauthorized access.", "warning")
+        return redirect(url_for('login'))
+
+    config = load_config()
+    cameras = load_cameras()
+    if request.method == 'POST':
+        # Handle Academic Year
+        academic_year = request.form.get('academic_year', '')
+        if academic_year:
+            config['academic_year'] = academic_year
+        else:
+            config['academic_year'] = ''
+
+        # Robust validation for unknown_log_interval_seconds
+        unknown_interval_str = request.form.get('unknown_log_interval_seconds')
+        unknown_interval_flash = {'message': "", 'category': "info"}
+
+        if unknown_interval_str is not None:
+            try:
+                unknown_interval_val = int(unknown_interval_str)
+                if unknown_interval_val >= 1:
+                    config['unknown_log_interval_seconds'] = unknown_interval_val
+                    unknown_interval_flash['message'] = f"Unknown face log interval successfully set to {unknown_interval_val} seconds."
+                    unknown_interval_flash['category'] = "success"
+                    logging.info(f"Configuration updated: unknown_log_interval_seconds = {unknown_interval_val}")
+                else:
+                    unknown_interval_flash['message'] = "Unknown face log interval must be 1 second or greater. Value not saved."
+                    unknown_interval_flash['category'] = "warning"
+                    logging.warning(f"Invalid unknown_log_interval_seconds value received: {unknown_interval_val}. Not saved.")
+            except (ValueError, TypeError):
+                unknown_interval_flash['message'] = "Invalid input for unknown face log interval. Please enter a whole number (e.g., 60). Value not saved."
+        else:
+            # Fallback to previous logic if not provided
+            config['unknown_log_interval_seconds'] = int(request.form.get('unknown_log_interval_seconds', config.get('unknown_log_interval_seconds', 60)))
+
+        # Handle other settings update
+        config['stop_time_enabled'] = bool(request.form.get('enable_stop_time'))
+        config['stop_time'] = request.form.get('stop_time', config.get('stop_time', '14:56'))
+        config['unknown_face_timeout'] = int(request.form.get('unknown_face_timeout', config.get('unknown_face_timeout', 3)))
+        save_config(config)
+
+        # Handle camera add
+        if 'add_camera' in request.form:
+            name = request.form.get('camera_name')
+            ip = request.form.get('camera_ip')
+            port = request.form.get('camera_port')
+            username = request.form.get('camera_username')
+            password = request.form.get('camera_password')
+            rtsp_url = request.form.get('camera_rtsp_url')
+            if name and ip and port and username and password and rtsp_url:
+                new_id = max([c.get('id', 0) for c in cameras], default=0) + 1
+                cameras.append({
+                    "id": new_id,
+                    "name": name,
+                    "ip": ip,
+                    "port": int(port),
+                    "username": username,
+                    "password": password,
+                    "rtsp_url": rtsp_url
+                })
+                save_cameras(cameras)
+                flash(Markup(f"Camera <b>{name}</b> added."), "success")
+            else:
+                flash("All camera fields are required.", "danger")
+
+        # Handle camera remove
+        if 'remove_camera' in request.form:
+            remove_id = int(request.form.get('remove_camera'))
+            cameras = [c for c in cameras if c['id'] != remove_id]
+            save_cameras(cameras)
+            flash("Camera removed.", "success")
+
+        return redirect(url_for('configure'))
+
+    # GET: Render page
+    return render_template(
+        'configure.html',
+        stop_time_enabled=config.get('stop_time_enabled', False),
+        current_stop_time=config.get('stop_time', '14:56'),
+        unknown_face_timeout=config.get('unknown_face_timeout', 3),
+        unknown_log_interval_seconds=config.get('unknown_log_interval_seconds', 60),
+        cameras=cameras,
+        academic_year=config.get('academic_year', '')
+    )
 
 RECOGNITION_THRESHOLD = 0.36
 
@@ -219,7 +349,7 @@ def refresh_faces_route():
         return jsonify({"message": f"Face cache refreshed. Loaded {len(known_face_data)} faces."}), 200
     except Exception as e:
         logging.error(f"Error during manual face cache refresh: {e}")
-        flash("Error refreshing face cache.", "error")
+        # flash("Error refreshing face cache.", "error")
         return jsonify({"message": "Error refreshing face cache."}), 500
 
 @app.route('/')
@@ -231,12 +361,13 @@ def index():
 @app.route('/live_feed')
 def live_feed():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access to live feed.", "warning")
+        # flash("Unauthorized access to live feed.", "warning")
         return redirect(url_for('login'))
-    return render_template('live_feed.html')
+    cameras = load_cameras()
+    return render_template('live_feed.html', cameras=cameras)
 
 
-def generate_frames():
+def generate_frames(source):
     config = load_config()
     stop_time_enabled = config.get('stop_time_enabled', False)
     stop_time_str = config.get('stop_time')
@@ -256,7 +387,7 @@ def generate_frames():
         logging.info("Automatic live feed stop time is disabled.")
 
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(source)
     if not cap.isOpened():
         logging.error("Cannot open camera 0")
         return
@@ -419,12 +550,37 @@ def video_feed():
     if session.get('user_type') != 'admin':
         logging.warning("Unauthorized attempt to access video_feed endpoint.")
         return Response("Unauthorized", status=403)
-    return Response(generate_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    camera_id = request.args.get('camera_id', type=int)
+    cameras = load_cameras()
+    camera = None
+    if camera_id is not None:
+        for cam in cameras:
+            if cam.get('id') == camera_id:
+                camera = cam
+                break
+        if not camera:
+            return Response("Camera not found", status=404)
+        rtsp_url = camera.get('rtsp_url')
+        # Convert "0", "1", etc. to int for local webcams
+        if isinstance(rtsp_url, str) and rtsp_url.isdigit():
+            rtsp_url = int(rtsp_url)
+        return Response(generate_frames(rtsp_url), mimetype='multipart/x-mixed-replace; boundary=frame')
+    # Default: fallback to first camera or local camera 0
+    if cameras:
+        rtsp_url = cameras[0].get('rtsp_url')
+        # Convert "0", "1", etc. to int for local webcams
+        if isinstance(rtsp_url, str) and rtsp_url.isdigit():
+            rtsp_url = int(rtsp_url)
+        return Response(generate_frames(rtsp_url), mimetype='multipart/x-mixed-replace; boundary=frame')
+    # If no cameras configured, fallback to local camera 0
+    return Response(generate_frames(0), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    print("[REGISTER DEBUG] register() route entered")
+    print("[REGISTER DEBUG] register() called. Method:", request.method, "Form:", dict(request.form), "Files:", dict(request.files))
     if session.get('user_type') != 'admin':
-        flash("Only admins can register new users.", "warning")
+        # flash("Only admins can register new users.", "warning")
         return redirect(url_for('login'))
 
     if request.method == 'POST':
@@ -432,20 +588,47 @@ def register():
         role = request.form.get('role')
         role = role.lower() if role else None
         branch = request.form.get('branch')
+        academic_year = request.form.get('academic_year')
         photo_data = request.form.get('photo')
         uploaded_file = request.files.get('uploadPhoto')
 
         allowed_roles = ['student', 'staff', 'others']
         if not role or role not in allowed_roles:
+            logging.debug(f"[REGISTER DEBUG] Invalid or missing role: {role}, allowed: {allowed_roles}")
+            print(f"[REGISTER DEBUG] Invalid or missing role: {role}, allowed: {allowed_roles}")
             flash(f"Invalid or missing role. Must be one of: {', '.join(allowed_roles)}.", "error")
+            print("[REGISTER DEBUG] Returning 400: Invalid or missing role")
+            print("[REGISTER DEBUG] Returning 400: Name is required")
             return render_template('register.html'), 400
 
         if not name:
-             flash("Name is required.", "error")
-             return render_template('register.html'), 400
-        if role in ['student', 'staff'] and not branch:
-            flash("Branch/Department is required for students and staff.", "error")
+            logging.debug(f"[REGISTER DEBUG] Name is missing. Form data: {request.form}")
+            print(f"[REGISTER DEBUG] Name is missing. Form data: {request.form}")
+            # flash("Name is required.", "error")
+            print("[REGISTER DEBUG] Returning 400: Branch is required for students")
+            print("[REGISTER DEBUG] Returning 400: Academic year invalid or missing")
             return render_template('register.html'), 400
+
+        # Updated validation: Branch required for students/staff, Academic Year required for students
+        if role == 'student':
+            if not branch:
+                logging.debug(f"[REGISTER DEBUG] Branch is missing for student. Form data: {request.form}")
+                print(f"[REGISTER DEBUG] Branch is missing for student. Form data: {request.form}")
+                # flash("Branch is required for students.", "error")
+                print("[REGISTER DEBUG] Returning 400: Branch/Department is required for staff")
+                return render_template('register.html'), 400
+            valid_academic_years = ['1st', '2nd', '3rd']
+            if not academic_year or academic_year not in valid_academic_years:
+                print(f"[REGISTER DEBUG] Academic year invalid or missing: {academic_year}. Form data: {request.form}")
+                # flash("Valid Academic Year (1st, 2nd, or 3rd) is required for students.", "error")
+                return render_template('register.html'), 400
+        elif role == 'staff':
+            if not branch:
+                logging.debug(f"[REGISTER DEBUG] Branch is missing for staff. Form data: {request.form}")
+                print(f"[REGISTER DEBUG] Branch is missing for staff. Form data: {request.form}")
+                # flash("Branch/Department is required for staff.", "error")
+                return render_template('register.html'), 400
+            academic_year = None
 
         image = None
         image_source = "unknown"
@@ -461,7 +644,8 @@ def register():
                 logging.info("Processing image from webcam data.")
             except Exception as e:
                 logging.error(f"Error decoding base64 image: {e}")
-                flash("Invalid photo data from webcam.", "error")
+                # flash("Invalid photo data from webcam.", "error")
+                print("[REGISTER DEBUG] Returning 400: No photo provided")
                 return render_template('register.html'), 400
         elif uploaded_file and uploaded_file.filename != '':
             filename = secure_filename(uploaded_file.filename)
@@ -481,7 +665,10 @@ def register():
                      except OSError as rm_err: logging.error(f"Error removing temporary file {file_path}: {rm_err}")
                 return render_template('register.html'), 400
         else:
-            flash("No photo provided (either webcam capture or file upload is required).", "error")
+            logging.debug(f"[REGISTER DEBUG] No photo provided. Form data: {request.form}, Files: {request.files}")
+            print(f"[REGISTER DEBUG] No photo provided. Form data: {request.form}, Files: {request.files}")
+            # flash("No photo provided (either webcam capture or file upload is required).", "error")
+            print("[REGISTER DEBUG] Returning 400: User already exists")
             return render_template('register.html'), 400
 
         if image is None:
@@ -489,7 +676,10 @@ def register():
             if file_path and os.path.exists(file_path):
                 try: os.remove(file_path)
                 except OSError as rm_err: logging.error(f"Error removing file {file_path} after load fail: {rm_err}")
-            flash("Failed to load image data.", "error")
+            # flash("Failed to load image data.", "error")
+            logging.debug(f"[REGISTER DEBUG] Image data is None after loading attempts. File path: {file_path}")
+            print(f"[REGISTER DEBUG] Image data is None after loading attempts. File path: {file_path}")
+            print("[REGISTER DEBUG] Returning 500: Image data is None after loading attempts")
             return render_template('register.html'), 500
 
         existing_user = mongo.db.students.find_one({'name': name})
@@ -499,6 +689,9 @@ def register():
             if file_path and os.path.exists(file_path):
                 try: os.remove(file_path)
                 except OSError as e: logging.error(f"Error removing upload file {file_path} for existing user: {e}")
+            logging.debug(f"[REGISTER DEBUG] User already exists: {name}")
+            print(f"[REGISTER DEBUG] User already exists: {name}")
+            print("[REGISTER DEBUG] Returning 400: Face detection/embedding failed")
             return render_template('register.html'), 400
 
         logging.info(f"Processing registration for {name} from {image_source}.")
@@ -515,6 +708,8 @@ def register():
             else:
                 message = "No face detected in the provided image. Please ensure the face is clear and well-lit."
             flash(message, "error")
+            logging.debug(f"[REGISTER DEBUG] Face detection/embedding failed for {name}. Face box: {box}")
+            print(f"[REGISTER DEBUG] Face detection/embedding failed for {name}. Face box: {box}")
             return render_template('register.html'), 400
 
         try:
@@ -525,10 +720,16 @@ def register():
                 'face_embedding': embedding_list,
                 'registered_at': datetime.utcnow() # Store as UTC
             }
-            if role in ['student', 'staff']:
+            # Conditionally add branch and academic_year
+            if role == 'student':
                 user_data['branch'] = branch
+                user_data['academic_year'] = academic_year
+            elif role == 'staff':
+                user_data['branch'] = branch
+                user_data['academic_year'] = None
             else:
-                 user_data['branch'] = None
+                user_data['branch'] = None
+                user_data['academic_year'] = None
 
             mongo.db.students.insert_one(user_data)
             logging.info(f"Successfully registered user: {name} with role: {role}")
@@ -538,7 +739,10 @@ def register():
 
         except Exception as e:
             logging.error(f"Database error during registration for {name}: {e}")
-            flash("Database error occurred during registration.", "error")
+            logging.debug(f"[REGISTER DEBUG] Database error during registration for {name}: {e}")
+            print(f"[REGISTER DEBUG] Database error during registration for {name}: {e}")
+            # flash("Database error occurred during registration.", "error")
+            print("[REGISTER DEBUG] Returning 500: Database error during registration")
             return render_template('register.html'), 500
 
     return render_template('register.html')
@@ -547,13 +751,14 @@ def register():
 @app.route('/view_students', methods=['GET'])
 def view_students():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
+        # flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
 
     try:
         search_query = request.args.get('search', '')
         role_filter = request.args.get('role_filter', '')
         branch_filter = request.args.get('branch_filter', '')
+        academic_year_filter = request.args.get('academic_year_filter', '')
         sort_by = request.args.get('sort_by', 'name')
         sort_order = request.args.get('sort_order', 'asc')
         india_tz = pytz.timezone('Asia/Kolkata')
@@ -563,7 +768,7 @@ def view_students():
             distinct_branches.sort()
         except Exception as db_err:
             logging.error(f"Error fetching distinct branches: {db_err}")
-            flash("Error loading branch filter options.", "error")
+            # flash("Error loading branch filter options.", "error")
             distinct_branches = []
 
         query_conditions = []
@@ -576,6 +781,8 @@ def view_students():
 
         if branch_filter:
             query_conditions.append({'branch': branch_filter})
+        if academic_year_filter:
+            query_conditions.append({'academic_year': academic_year_filter})
 
         query = {}
         if query_conditions:
@@ -586,7 +793,7 @@ def view_students():
         if sort_by not in valid_sort_fields:
             sort_by = 'name'
 
-        students_cursor = mongo.db.students.find(query, {"name": 1, "branch": 1, "role": 1, "registered_at": 1, "_id": 1}) \
+        students_cursor = mongo.db.students.find(query, {"name": 1, "branch": 1, "role": 1, "registered_at": 1, "_id": 1, "academic_year": 1}) \
                                          .sort(sort_by, mongo_sort_order)
         students_list = list(students_cursor)
 
@@ -607,6 +814,7 @@ def view_students():
                                search_query=search_query,
                                role_filter=role_filter,
                                branch_filter=branch_filter,
+                               academic_year_filter=academic_year_filter,
                                distinct_branches=distinct_branches,
                                sort_by=sort_by,
                                sort_order=sort_order)
@@ -620,12 +828,13 @@ def view_students():
              logging.error(f"Error fetching distinct branches during exception handling: {db_err}")
              distinct_branches = []
 
-        flash("Error loading student data. Please check logs or contact support.", "error")
+        # flash("Error loading student data. Please check logs or contact support.", "error")
         return render_template('view_students.html',
                                students=[],
                                search_query=request.args.get('search', ''),
                                role_filter=request.args.get('role_filter', ''),
                                branch_filter=request.args.get('branch_filter', ''),
+                               academic_year_filter=request.args.get('academic_year_filter', ''),
                                distinct_branches=distinct_branches,
                                sort_by=request.args.get('sort_by', 'name'),
                                sort_order=request.args.get('sort_order', 'asc')), 200
@@ -634,19 +843,19 @@ def view_students():
 @app.route('/delete_student/<student_id>', methods=['POST'])
 def delete_student(student_id):
     if session.get('user_type') != 'admin':
-         flash("Unauthorized action.", "error")
+         # flash("Unauthorized action.", "error")
          return redirect(url_for('view_students'))
 
     try:
         oid = ObjectId(student_id)
     except Exception:
-        flash("Invalid student ID format.", "error")
+        # flash("Invalid student ID format.", "error")
         return redirect(url_for('view_students'))
 
     try:
         student_to_delete = mongo.db.students.find_one({'_id': oid}, {'name': 1})
         if not student_to_delete:
-            flash("Student not found for deletion.", "error")
+            # flash("Student not found for deletion.", "error")
             return redirect(url_for('view_students')), 404
 
         student_name = student_to_delete.get('name', 'Unknown')
@@ -663,110 +872,29 @@ def delete_student(student_id):
                 logging.error(f"Error removing sighting logs for {student_name}: {log_e}")
         else:
             logging.warning(f"Student with ID {student_id} found but deletion failed.")
-            flash("Student found but could not be deleted.", "error")
+            # flash("Student found but could not be deleted.", "error")
 
     except Exception as e:
         logging.error(f"Error deleting student {student_id}: {e}")
-        flash("An error occurred while trying to delete the student.", "error")
+        # flash("An error occurred while trying to delete the student.", "error")
 
     return redirect(url_for('view_students'))
 
 
-@app.route('/configure', methods=['GET', 'POST'])
-def configure():
-    if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
-        return redirect(url_for('login'))
+# Removed duplicate configure route and function (merged into single definition above)
 
-    config = load_config()
-
-    if request.method == 'POST':
-        unknown_interval_str = request.form.get('unknown_log_interval_seconds')
-        unknown_interval_flash = {'message': "", 'category': "info"}
-
-        if unknown_interval_str is not None:
-            try:
-                unknown_interval_val = int(unknown_interval_str)
-                if unknown_interval_val >= 1:
-                    config['unknown_log_interval_seconds'] = unknown_interval_val
-                    unknown_interval_flash['message'] = f"Unknown face log interval successfully set to {unknown_interval_val} seconds."
-                    unknown_interval_flash['category'] = "success"
-                    logging.info(f"Configuration updated: unknown_log_interval_seconds = {unknown_interval_val}")
-                else:
-                    unknown_interval_flash['message'] = "Unknown face log interval must be 1 second or greater. Value not saved."
-                    unknown_interval_flash['category'] = "warning"
-                    logging.warning(f"Invalid unknown_log_interval_seconds value received: {unknown_interval_val}. Not saved.")
-            except (ValueError, TypeError):
-                unknown_interval_flash['message'] = "Invalid input for unknown face log interval. Please enter a whole number (e.g., 60). Value not saved."
-                unknown_interval_flash['category'] = "warning"
-                logging.warning(f"Invalid unknown_log_interval_seconds input received: '{unknown_interval_str}'. Not saved.")
-            except Exception as e:
-                logging.error(f"Error processing unknown_log_interval_seconds '{unknown_interval_str}': {e}")
-                unknown_interval_flash['message'] = "An unexpected error occurred saving the unknown face log interval."
-                unknown_interval_flash['category'] = "error"
-        else:
-             unknown_interval_flash['message'] = "Unknown face log interval field was missing from the request. Value not saved."
-             unknown_interval_flash['category'] = "warning"
-             logging.warning("unknown_log_interval_seconds field missing from POST request.")
-
-        enable_stop_time = request.form.get('enable_stop_time') == 'on'
-        stop_time_str = request.form.get('stop_time')
-        config['stop_time_enabled'] = enable_stop_time
-        flash_message = ""
-        flash_category = ""
-
-        if enable_stop_time:
-            if stop_time_str and len(stop_time_str) == 5 and stop_time_str[2] == ':':
-                try:
-                    datetime.strptime(stop_time_str, '%H:%M')
-                    config['stop_time'] = stop_time_str
-                    flash_message = f"Live feed stop time enabled and set to {stop_time_str}."
-                    flash_category = "success"
-                except ValueError:
-                    flash_message = "Stop time enabled, but the provided time format was invalid. Please use HH:MM (24-hour). Previous time (if any) kept."
-                    flash_category = "warning"
-                except Exception as e:
-                     logging.error(f"Error processing/saving stop time: {e}")
-                     flash_message = "An error occurred while saving the time."
-                     flash_category = "error"
-            else:
-                flash_message = "Stop time enabled, but no valid time was provided. Please enter a time in HH:MM format."
-                flash_category = "warning"
-        else:
-            flash_message = "Automatic live feed stop time disabled."
-            flash_category = "success"
-        stop_time_flash = {'message': flash_message, 'category': flash_category}
-
-
-        try:
-            save_config(config)
-            if stop_time_flash.get('message'):
-                flash(stop_time_flash['message'], stop_time_flash['category'])
-            if unknown_interval_flash.get('message'):
-                 flash(unknown_interval_flash['message'], unknown_interval_flash['category'])
-        except Exception as e:
-            logging.error(f"Error saving configuration: {e}")
-            flash("Failed to save one or more configuration settings.", "error")
-            return redirect(url_for('configure'))
-
-        return redirect(url_for('configure'))
-
-    try:
-        unknown_log_interval_seconds = int(config.get('unknown_log_interval_seconds', 60))
-        if unknown_log_interval_seconds < 1:
-            unknown_log_interval_seconds = 60
-    except (ValueError, TypeError):
-        unknown_log_interval_seconds = 60
 
     current_stop_time = config.get('stop_time', '')
     stop_time_enabled = config.get('stop_time_enabled', False)
 
     unknown_face_timeout = config.get('unknown_face_timeout', 5)
+    academic_year = config.get('academic_year', '')
     return render_template('configure.html',
                            current_stop_time=current_stop_time,
                            stop_time_enabled=stop_time_enabled,
                            unknown_log_interval_seconds=unknown_log_interval_seconds,
-                           unknown_face_timeout=unknown_face_timeout)
+                           unknown_face_timeout=unknown_face_timeout,
+                           academic_year=academic_year)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -780,11 +908,11 @@ def login():
             session['user_type'] = 'admin'
             session['user_name'] = 'Admin'
             logging.info("Admin login successful.")
-            flash("Admin login successful.", "success")
+            # flash("Admin login successful.", "success")
             return redirect(url_for('index'))
         else:
             logging.warning("Invalid admin password attempt.")
-            flash("Invalid admin credentials.", "error")
+            # flash("Invalid admin credentials.", "error")
             return render_template('login.html'), 401
 
     return render_template('login.html')
@@ -796,7 +924,7 @@ def logout():
     session.pop('user_type', None)
     session.pop('user_name', None)
     logging.info(f"User '{user_name}' logged out.")
-    flash("You have been logged out.", "info")
+    # flash("You have been logged out.", "info")
     return redirect(url_for('login'))
 
 
@@ -806,20 +934,20 @@ def restrict_access():
         return None
 
     if 'user_type' not in session:
-        flash("Please log in to access this page.", "info")
+        # flash("Please log in to access this page.", "info")
         return redirect(url_for('login'))
 
     if session.get('user_type') == 'admin':
         return None
 
-    flash("Admin access required. Please log in.", "warning")
+    # flash("Admin access required. Please log in.", "warning")
     return redirect(url_for('login'))
 
 
 @app.route('/seen_log')
 def seen_log_view():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
+        # flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
     try:
         log_records_cursor = mongo.db.seen_log.find().sort('timestamp', -1)
@@ -854,13 +982,13 @@ def seen_log_view():
         return render_template('seen_log.html', grouped_logs=grouped_logs_dict, unknown_logs=unknown_logs)
     except Exception as e:
         logging.error(f"Error fetching or grouping seen log records: {e}")
-        flash("Error loading seen log data.", "error")
+        # flash("Error loading seen log data.", "error")
         return render_template('seen_log.html', grouped_logs={}, unknown_logs=[]), 500
 
 @app.route('/unknown_captures')
 def unknown_captures():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
+        # flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
     try:
         # Parse optional start_time and end_time from query params
@@ -873,14 +1001,14 @@ def unknown_captures():
                 start_dt = datetime.fromisoformat(start_time_str)
                 time_filter['$gte'] = start_dt
             except ValueError:
-                flash("Invalid start time format. Use ISO format.", "warning")
-
+                pass
         if end_time_str:
             try:
                 end_dt = datetime.fromisoformat(end_time_str)
                 time_filter['$lte'] = end_dt
             except ValueError:
-                flash("Invalid end time format. Use ISO format.", "warning")
+                pass
+                print(f"[DEBUG] Invalid end time format received: {end_time_str}. Expected ISO format.")
 
         query = {"type": {"$in": ["unknown_sighting", "processing_error_sighting"]}}
         if time_filter:
@@ -910,14 +1038,14 @@ def unknown_captures():
         return render_template('unknown_captures.html', grouped_unknowns=grouped_unknowns_dict)
     except Exception as e:
         logging.error(f"Error fetching or grouping unknown captures: {e}")
-        flash("Error loading unknown captures data.", "error")
+        # flash("Error loading unknown captures data.", "error")
         return render_template('unknown_captures.html', grouped_unknowns={}), 500
 
 @app.route('/reset_seen_log', methods=['POST'])
 def reset_seen_log():
     if session.get('user_type') != 'admin':
         logging.warning("Unauthorized attempt to reset seen log.")
-        flash("Unauthorized action.", "error")
+        # flash("Unauthorized action.", "error")
         return redirect(url_for('login'))
 
     try:
@@ -927,7 +1055,7 @@ def reset_seen_log():
         logging.info(f"Seen log reset requested by admin. {deleted_count} records deleted.")
     except Exception as e:
         logging.error(f"Error resetting seen log: {e}")
-        flash("An error occurred while resetting the seen log.", "error")
+        # flash("An error occurred while resetting the seen log.", "error")
 
     return redirect(url_for('seen_log_view'))
 
@@ -992,7 +1120,7 @@ def get_attendance():
 @app.route('/attendance')
 def attendance_page():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
+        # flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
 
     try:
@@ -1019,16 +1147,27 @@ def attendance_page():
         attendance_data = defaultdict(lambda: {'timestamps_utc': []})
         user_details = {}
 
-        known_users = list(mongo.db.students.find({}, {"name": 1, "branch": 1, "role": 1}))
+        # Use academic_year instead of role
+        known_users = list(mongo.db.students.find({}, {"name": 1, "branch": 1, "academic_year": 1}))
         for user in known_users:
-            user_details[user['name']] = {'branch': user.get('branch', 'N/A'), 'role': user.get('role', 'N/A')}
-
+            user_details[user['name']] = {
+                'branch': user.get('branch', 'N/A'),
+                'academic_year': user.get('academic_year', 'N/A')
+            }
 
         for record in log_records_cursor:
             name = record.get('name')
             timestamp_utc = record.get('timestamp')
             if name and isinstance(timestamp_utc, datetime):
                  attendance_data[name]['timestamps_utc'].append(timestamp_utc)
+
+        # Default filters
+        DEFAULT_BRANCH = "C.S.E."
+        DEFAULT_ACADEMIC_YEAR = "1st"
+
+        # Get filters from query params, fallback to defaults
+        branch_filter = request.args.get('branch_filter', DEFAULT_BRANCH)
+        academic_year_filter = request.args.get('academic_year_filter', DEFAULT_ACADEMIC_YEAR)
 
         final_attendance = []
         for name, data in attendance_data.items():
@@ -1041,30 +1180,32 @@ def attendance_page():
                 arriving_time_kolkata = arriving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
                 leaving_time_kolkata = leaving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
 
-                details = user_details.get(name, {'branch': 'N/A', 'role': 'N/A'})
-                final_attendance.append({
-                    'name': name,
-                    'branch': details['branch'],
-                    'role': details['role'],
-                    'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
-                    'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
-                    'date': arriving_time_kolkata.strftime('%Y-%m-%d')
-                })
+                details = user_details.get(name, {'branch': 'N/A', 'academic_year': 'N/A'})
+                # Apply filters
+                if details['branch'] == branch_filter and details['academic_year'] == academic_year_filter:
+                    final_attendance.append({
+                        'name': name,
+                        'branch': details['branch'],
+                        'academic_year': details['academic_year'],
+                        'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
+                        'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
+                        'date': arriving_time_kolkata.strftime('%Y-%m-%d')
+                    })
 
         logging.info(f"Processed attendance for {len(final_attendance)} individuals for attendance page.")
         final_attendance.sort(key=lambda x: x['name'])
 
-        return render_template('attendance.html', attendance_records=final_attendance)
-
+        return render_template('attendance.html', attendance_records=final_attendance, branch_filter=branch_filter, academic_year_filter=academic_year_filter)
     except Exception as e:
         logging.error(f"Error generating attendance page: {e}")
-        flash("Error loading attendance data.", "error")
+        # flash("Error loading attendance data.", "error")
+        return render_template('attendance.html', attendance_records=[]), 500
         return render_template('attendance.html', attendance_records=[]), 500
 
 @app.route('/export_attendance_excel')
 def export_attendance_excel():
     if session.get('user_type') != 'admin':
-        flash("Unauthorized access.", "warning")
+        # flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
 
     try:
@@ -1154,7 +1295,7 @@ def export_attendance_excel():
 
     except Exception as e:
         logging.error(f"Error generating Excel export: {e}")
-        flash("Error generating Excel export.", "error")
+        # flash("Error generating Excel export.", "error")
         return redirect(url_for('attendance_page'))
 
 

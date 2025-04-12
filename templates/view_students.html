@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Students</title>
+    <title>Manage Members</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='sidebar.css') }}">
     <!-- Removed internal style block -->
@@ -12,7 +12,7 @@
     {% include 'sidebar.html' %}
     <img src="{{ url_for('static', filename='Logo.png') }}" alt="Logo" class="logo small-logo">
     <div class="glass-container">
-        <h1>View Students</h1>
+        <h1>Manage Members</h1>
 
         {# Flash messages suppressed on this page to avoid unwanted notifications #}
 
@@ -41,6 +41,15 @@
                                 <option value="{{ branch }}" {% if branch_filter == branch %}selected{% endif %}>{{ branch }}</option>
                             {% endif %}
                         {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="academic_year_filter">Filter by Academic Year:</label>
+                    <select id="academic_year_filter" name="academic_year_filter" onchange="this.form.submit()">
+                        <option value="" {% if not academic_year_filter %}selected{% endif %}>All Years</option>
+                        <option value="1st" {% if academic_year_filter == '1st' %}selected{% endif %}>1st</option>
+                        <option value="2nd" {% if academic_year_filter == '2nd' %}selected{% endif %}>2nd</option>
+                        <option value="3rd" {% if academic_year_filter == '3rd' %}selected{% endif %}>3rd</option>
                     </select>
                 </div>
 
@@ -79,6 +88,7 @@
                                 Role {% if sort_by == 'role' %}<span class="sort-arrow">{{ '▲' if sort_order == 'asc' else '▼' }}</span>{% endif %}
                             </a>
                         </th>
+                        <th>Academic Year</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -89,6 +99,7 @@
                         <td>{{ student.branch if student.branch else 'N/A' }}</td>
                         <td>{{ student.registered_at_str }}</td>
                         <td>{{ (student.role | capitalize) if student.role else 'Not Assigned' }}</td>
+                        <td>{{ student.academic_year if student.academic_year else 'N/A' }}</td>
                         <td>
                             <form action="{{ url_for('delete_student', student_id=student._id_str) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete {{ student.name }}?');">
                                 <button type="submit">Delete</button>
