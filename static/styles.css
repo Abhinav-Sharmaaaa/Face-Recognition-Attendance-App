@@ -1152,3 +1152,17 @@ select option:hover {
     color: #fff !important;
 }
 }
+
+/* Explicit dark mode dropdown option styling for better readability */
+body:not([data-theme="light"]) select,
+body:not([data-theme="light"]) .themed-select {
+    background-color: #23243a !important;
+    color: #E0F2F7 !important;
+    border: 1px solid #444 !important;
+}
+body:not([data-theme="light"]) select option,
+body:not([data-theme="light"]) .themed-select option {
+    background-color: #23243a !important;
+    color: #E0F2F7 !important;
+    border-bottom: 1px solid #333 !important;
+}

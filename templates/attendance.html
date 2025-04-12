@@ -13,10 +13,14 @@
                 <form method="get" action="{{ url_for('attendance_page') }}" style="margin-bottom: 20px; display: flex; gap: 1em; align-items: center;">
                     <label for="branch_filter">Branch:</label>
                     <select name="branch_filter" id="branch_filter">
+                        <option value="">Select Branch</option>
                         <option value="C.S.E." {% if branch_filter == "C.S.E." %}selected{% endif %}>C.S.E.</option>
-                        <option value="E.C.E." {% if branch_filter == "E.C.E." %}selected{% endif %}>E.C.E.</option>
-                        <option value="M.E." {% if branch_filter == "M.E." %}selected{% endif %}>M.E.</option>
-                        <option value="N/A" {% if branch_filter == "N/A" %}selected{% endif %}>N/A</option>
+                        <option value="I.T." {% if branch_filter == "I.T." %}selected{% endif %}>I.T.</option>
+                        <option value="Electronics" {% if branch_filter == "Electronics" %}selected{% endif %}>Electronics</option>
+                        <option value="Mechanical" {% if branch_filter == "Mechanical" %}selected{% endif %}>Mechanical</option>
+                        <option value="Automobile" {% if branch_filter == "Automobile" %}selected{% endif %}>Automobile</option>
+                        <option value="Civil" {% if branch_filter == "Civil" %}selected{% endif %}>Civil</option>
+                        <option value="Pharmacy" {% if branch_filter == "Pharmacy" %}selected{% endif %}>Pharmacy</option>
                     </select>
 
                     <label for="academic_year_filter">Academic Year:</label>
