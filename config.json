@@ -8,5 +8,6 @@
     "live_feed_sleep": 0.0,
     "jpeg_quality": 30,
     "resize_width": 640,
-    "resize_height": 360
+    "resize_height": 360,
+    "known_log_interval_seconds": 60
 }

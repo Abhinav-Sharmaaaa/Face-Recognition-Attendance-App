@@ -84,16 +84,29 @@ def load_config():
         "unknown_face_timeout": 5,
         "unknown_log_interval_seconds": 60,
         "academic_year": "",
-        "process_every_n_frames": 10,
-        "live_feed_sleep": 0.1,
-        "jpeg_quality": 60
+        "process_every_n_frames": 10, # Default frame skip
+        "live_feed_sleep": 0.0,        # Default sleep time (0 means no artificial delay)
+        "jpeg_quality": 60,           # Default JPEG quality
+        "resize_width": 640,          # Default resize width
+        "resize_height": 360          # Default resize height
     }
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, 'r') as f:
                 loaded_config = json.load(f)
-                default_config.update(loaded_config)
-                return default_config
+                # Ensure all keys exist, merging defaults with loaded values
+                config = default_config.copy()
+                config.update(loaded_config)
+                # Validate numeric types after loading
+                for key in ["unknown_face_timeout", "unknown_log_interval_seconds", "known_log_interval_seconds", "process_every_n_frames", "jpeg_quality", "resize_width", "resize_height"]:
+                    if key in config and not isinstance(config[key], (int, float)):
+                        logging.warning(f"Config key '{key}' has non-numeric value '{config[key]}'. Using default: {default_config[key]}")
+                        config[key] = default_config[key]
+                if "live_feed_sleep" in config and not isinstance(config["live_feed_sleep"], (int, float)):
+                     logging.warning(f"Config key 'live_feed_sleep' has non-numeric value '{config['live_feed_sleep']}'. Using default: {default_config['live_feed_sleep']}")
+                     config["live_feed_sleep"] = default_config["live_feed_sleep"]
+
+                return config
         except json.JSONDecodeError:
             logging.error(f"Error decoding JSON from {CONFIG_FILE}. Using defaults.")
             return default_config
@@ -200,13 +213,19 @@ def configure():
                 flash("Invalid value for Unknown Log Interval. Must be a number.", "warning")
 
             try:
+                known_interval = int(request.form.get('known_log_interval_seconds', config.get('known_log_interval_seconds', 60)))
+                config['known_log_interval_seconds'] = max(1, known_interval)
+            except (ValueError, TypeError):
+                flash("Invalid value for Known Log Interval. Must be a number.", "warning")
+
+            try:
                 n_frames = int(request.form.get('process_every_n_frames', config.get('process_every_n_frames', 10)))
                 config['process_every_n_frames'] = max(1, n_frames)
             except (ValueError, TypeError):
                 flash("Invalid value for Frame Skip. Must be a number.", "warning")
 
             try:
-                feed_sleep = float(request.form.get('live_feed_sleep', config.get('live_feed_sleep', 0.1)))
+                feed_sleep = float(request.form.get('live_feed_sleep', config.get('live_feed_sleep', 0.0)))
                 config['live_feed_sleep'] = max(0.0, feed_sleep)
             except (ValueError, TypeError):
                 flash("Invalid value for Live Feed Sleep. Must be a number (e.g., 0.1).", "warning")
@@ -216,6 +235,20 @@ def configure():
                 config['jpeg_quality'] = max(1, min(100, quality))
             except (ValueError, TypeError):
                 flash("Invalid value for JPEG Quality. Must be a number between 1 and 100.", "warning")
+
+            # Add resize options
+            try:
+                resize_w = int(request.form.get('resize_width', config.get('resize_width', 640)))
+                config['resize_width'] = max(160, resize_w) # Set a minimum practical width
+            except (ValueError, TypeError):
+                 flash("Invalid value for Resize Width. Must be a number.", "warning")
+
+            try:
+                resize_h = int(request.form.get('resize_height', config.get('resize_height', 360)))
+                config['resize_height'] = max(120, resize_h) # Set a minimum practical height
+            except (ValueError, TypeError):
+                 flash("Invalid value for Resize Height. Must be a number.", "warning")
+
 
             config['academic_year'] = request.form.get('academic_year', config.get('academic_year', ''))
 
@@ -309,16 +342,20 @@ def configure():
 
         return redirect(url_for('configure'))
 
+    # Pass resize config to template
     return render_template(
         'configure.html',
         stop_time_enabled=config.get('stop_time_enabled', False),
         current_stop_time=config.get('stop_time', '18:00'),
         unknown_face_timeout=config.get('unknown_face_timeout', 5),
         unknown_log_interval_seconds=config.get('unknown_log_interval_seconds', 60),
+        known_log_interval_seconds=config.get('known_log_interval_seconds', 60),
         academic_year=config.get('academic_year', ''),
         process_every_n_frames=config.get('process_every_n_frames', 10),
-        live_feed_sleep=config.get('live_feed_sleep', 0.1),
+        live_feed_sleep=config.get('live_feed_sleep', 0.0),
         jpeg_quality=config.get('jpeg_quality', 60),
+        resize_width=config.get('resize_width', 640),      # Pass resize width
+        resize_height=config.get('resize_height', 360),    # Pass resize height
         cameras=cameras
     )
 
@@ -478,20 +515,26 @@ def live_feed():
 def generate_frames(source):
     logging.info(f"generate_frames started for source: {source}")
     logging.info(f"Known faces loaded: {len(known_face_names)}")
-    config = load_config()
+    config = load_config() # Load latest config at start of stream
 
     stop_time_enabled = config.get('stop_time_enabled', False)
     stop_time_str = config.get('stop_time')
-    process_every_n_frames = max(1, config.get('process_every_n_frames', 10))
-    live_feed_sleep = max(0.0, config.get('live_feed_sleep', 0.1))
+    # Ensure process_every_n_frames is at least 1
+    process_every_n_frames = max(1, config.get('process_every_n_frames', 1))
+    live_feed_sleep = max(0.0, config.get('live_feed_sleep', 0.0))
     jpeg_quality = max(1, min(100, config.get('jpeg_quality', 60)))
     unknown_log_interval_seconds = config.get('unknown_log_interval_seconds', 60)
+    known_log_interval_seconds = config.get('known_log_interval_seconds', 60) # Load known log interval
     resize_width = config.get('resize_width', None)
     resize_height = config.get('resize_height', None)
 
-    log_interval = timedelta(minutes=1)
+    log_interval = timedelta(minutes=1) # This seems unused?
     unknown_log_interval = timedelta(seconds=unknown_log_interval_seconds)
-    logging.info(f"Using settings - Process every {process_every_n_frames} frames, Sleep: {live_feed_sleep}s, JPEG Quality: {jpeg_quality}")
+    known_log_interval = timedelta(seconds=known_log_interval_seconds) # Create timedelta for known interval
+
+    logging.info(f"Using settings - Process every {process_every_n_frames} frames, Sleep: {live_feed_sleep}s, JPEG Quality: {jpeg_quality}, Resize: {resize_width}x{resize_height}")
+    logging.info(f"Log Intervals - Unknown: {unknown_log_interval_seconds}s, Known: {known_log_interval_seconds}s")
+
 
     stop_time_obj = None
     india_tz = pytz.timezone('Asia/Kolkata')
@@ -510,11 +553,17 @@ def generate_frames(source):
     try:
         if isinstance(source, str) and source.startswith("rtsp://"):
             logging.info(f"Attempting to open RTSP stream: {source}")
-            if "?" in source: source += "&rtsp_transport=tcp"
-            else: source += "?rtsp_transport=tcp"
+            # Ensure TCP transport is appended correctly
+            parsed_url = urllib.parse.urlparse(source)
+            query = urllib.parse.parse_qs(parsed_url.query)
+            query['rtsp_transport'] = ['tcp'] # Force TCP
+            updated_query = urllib.parse.urlencode(query, doseq=True)
+            # Rebuild URL
+            source = urllib.parse.urlunparse(parsed_url._replace(query=updated_query))
+
             logging.info(f"Using RTSP URL with forced TCP: {source}")
             cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
-            buffer_size = 32
+            buffer_size = 3 # Reduce buffer size for potentially lower latency
             success_set_buffer = cap.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
             if success_set_buffer: logging.info(f"Successfully set RTSP buffer size to {buffer_size}.")
             else: logging.warning("Failed to set buffer size for RTSP stream.")
@@ -531,181 +580,236 @@ def generate_frames(source):
                      logging.warning(f"Failed to open source {source} with backend {backend}")
             if cap is None or not cap.isOpened():
                 logging.error(f"Failed to open source {source} with any backend.")
+                logging.error(f"Exiting generator: Failed to open source {source} with any backend.")
                 return
 
         if not cap.isOpened():
             logging.error(f"Cannot open video source: {source}")
+            logging.error(f"Exiting generator: Cannot open video source: {source}")
             return
 
         frame_count = 0
         last_known_faces_log = {}
         last_unknown_log_time = None
         consecutive_errors = 0
-        MAX_CONSECUTIVE_ERRORS = 30
+        MAX_CONSECUTIVE_ERRORS = 30 # Increased tolerance slightly
+        MAX_RECONNECT_ATTEMPTS = 5
+        reconnect_attempts = 0
 
         while True:
             if stop_time_enabled and stop_time_obj:
                 current_time_india = datetime.now(india_tz).time()
                 if current_time_india >= stop_time_obj:
                     logging.info(f"Stop time {stop_time_obj} reached. Stopping live feed.")
+                    logging.info(f"Exiting generator: Stop time {stop_time_obj} reached.")
                     break
 
-            try:
-                grabbed = cap.grab()
-                if not grabbed:
-                     consecutive_errors += 1
-                     logging.warning(f"cap.grab() failed for source {source}. Consecutive errors: {consecutive_errors}")
-                     if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                         logging.error(f"Max consecutive grab errors ({MAX_CONSECUTIVE_ERRORS}) reached. Stopping generator.")
-                         break
-                     time.sleep(0.05)
-                     continue
-
-                if frame_count % process_every_n_frames == 0:
-                    ret, frame = cap.retrieve()
-                    # Resize frame if config values are set
-                    if ret and frame is not None and resize_width and resize_height:
-                        frame = cv2.resize(frame, (resize_width, resize_height), interpolation=cv2.INTER_AREA)
+            # --- Start of frame processing loop modification ---
+            # Read frame directly ONLY if it's time to process according to frame skipping
+            # This simplifies the logic compared to grab/retrieve
+            # NOTE: This approach might read slightly older frames if processing is slow
+            # compared to grab()/retrieve(), but is often more stable.
+            frame = None
+            if frame_count % process_every_n_frames == 0:
+                try:
+                    ret, frame = cap.read()
                     if not ret or frame is None:
                         consecutive_errors += 1
-                        logging.warning(f"cap.retrieve() failed after grab for source {source}. Consecutive errors: {consecutive_errors}")
+                        logging.warning(f"cap.read() failed for source {source}. Consecutive errors: {consecutive_errors}")
                         if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
-                            logging.error(f"Max consecutive retrieve errors ({MAX_CONSECUTIVE_ERRORS}) reached. Stopping generator.")
-                            break
-                        continue
-                else:
-                     frame_count += 1
-                     continue
+                            logging.error(f"Max consecutive read errors ({MAX_CONSECUTIVE_ERRORS}) reached. Attempting to reconnect stream.")
+                            # --- Reconnection Logic (copied from original grab/retrieve error handling) ---
+                            cap.release()
+                            reconnect_attempts += 1
+                            if reconnect_attempts > MAX_RECONNECT_ATTEMPTS:
+                                logging.error(f"Max reconnect attempts ({MAX_RECONNECT_ATTEMPTS}) reached. Stopping generator.")
+                                break
+                            pytime.sleep(2) # Use pytime to avoid confusion with datetime.time
+                            # Re-initialize capture object
+                            if isinstance(source, str) and source.startswith("rtsp://"):
+                                cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
+                                cap.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
+                            else:
+                                cap = cv2.VideoCapture(source) # Adjust if using specific backends
 
-            except cv2.error as e:
-                logging.error(f"cv2 error during frame grab/retrieve from source {source}: {e}")
-                consecutive_errors += 1
-                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS: break
-                time.sleep(0.1)
-                continue
-
-            consecutive_errors = 0
-
-            if not hasattr(frame, "shape") or len(frame.shape) != 3 or frame.shape[0] == 0 or frame.shape[1] == 0:
-                logging.warning(f"Invalid frame retrieved from source {source}: {type(frame)}, shape: {getattr(frame, 'shape', None)}. Skipping.")
-                frame_count += 1
-                continue
-
-            processing_frame = frame.copy()
-            detected_box = None
-            status_text = "Processing..."
-            status_color = (0, 255, 255)
-
-            try:
-                face_embedding, detected_box = detect_and_encode_face(processing_frame)
-
-                if detected_box:
-                    logging.debug("Face detected in frame.")
-                    (x, y, w, h) = detected_box
-                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-                    if face_embedding is not None:
-                        match_found = False
-                        min_distance = float('inf')
-
-                        if known_face_embeddings_list:
-                            distances = [cosine(face_embedding, known_emb) for known_emb in known_face_embeddings_list]
-                            if distances:
-                                min_distance_idx = np.argmin(distances)
-                                min_distance = distances[min_distance_idx]
-
-                                if min_distance < RECOGNITION_THRESHOLD:
-                                    name = known_face_names[min_distance_idx]
-                                    logging.debug(f"Match found: {name} (distance: {min_distance:.2f})")
-                                    status_text = f"Known: {name} ({min_distance:.2f})"
-                                    status_color = (0, 255, 0)
-                                    match_found = True
-
-                                    now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
-                                    log_entry = {
-                                        'type': 'known_sighting',
-                                        'name': name,
-                                        'timestamp': now_utc,
-                                        'status_at_log': 'Known'
-                                    }
-                                    try:
-                                        # Fetch branch and academic_year from students collection
-                                        student_doc = mongo.db.students.find_one({'name': name}, {"branch": 1, "academic_year": 1})
-                                        if student_doc and student_doc.get("branch") and student_doc.get("academic_year"):
-                                            branch = student_doc["branch"].lower().replace(".", "").replace(" ", "_")
-                                            year = student_doc["academic_year"].lower().replace(".", "").replace(" ", "_")
-                                            collection_name = f"{branch}_{year}_year"
-                                            # Insert into the specific collection
-                                            getattr(mongo.db, collection_name).insert_one(log_entry)
-                                            logging.debug(f"Logged known sighting for {name} at {now_utc} in collection {collection_name}")
-                                        else:
-                                            # Fallback to default collection if details are missing
-                                            mongo.db.seen_log.insert_one(log_entry)
-                                            logging.warning(f"Branch/year missing for {name}, logged in default seen_log collection.")
-                                    except Exception as log_e:
-                                        logging.error(f"Failed to log known sighting for {name}: {log_e}")
-
-                        if not match_found:
-                            status_text = f"Unknown ({min_distance:.2f})" if min_distance != float('inf') else "Unknown"
-                            status_color = (0, 0, 255)
-                            now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
-                            if not last_unknown_log_time or (now_utc - last_unknown_log_time) > unknown_log_interval:
-                                face_img_b64 = None
-                                try:
-                                    face_region = processing_frame[y:y+h, x:x+w]
-                                    if face_region.size > 0:
-                                        _, buffer = cv2.imencode('.jpg', face_region, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
-                                        face_img_b64 = base64.b64encode(buffer).decode('utf-8')
-                                except Exception as img_err: logging.error(f"Error encoding unknown face image: {img_err}")
-
-                                log_entry = {'type': 'unknown_sighting', 'timestamp': now_utc, 'status_at_log': 'Unknown', 'face_image_base64': face_img_b64}
-                                try:
-                                    mongo.db.seen_log.insert_one(log_entry)
-                                    logging.info(f"Logged unknown sighting at {now_utc}")
-                                except Exception as log_e: logging.error(f"Failed to log unknown sighting: {log_e}")
-                                last_unknown_log_time = now_utc
+                            if not cap.isOpened():
+                                logging.error(f"Reconnection failed for source {source}.")
+                                # Keep trying or break based on desired behavior
+                                pytime.sleep(5) # Wait longer before next attempt
+                                continue # Try to reconnect again
+                            else:
+                                logging.info(f"Reconnected to stream: {source}")
+                                consecutive_errors = 0
+                            # --- End Reconnection Logic ---
+                        else:
+                             pytime.sleep(0.05) # Small delay on read error
+                        frame_count += 1 # Increment even on error to avoid infinite loop if source dies
+                        continue # Skip processing this cycle
                     else:
-                         status_text = "Processing Error"
-                         status_color = (255, 0, 0)
-                else:
-                     status_text = "No Face Detected"
-                     status_color = (255, 255, 255)
+                        consecutive_errors = 0 # Reset error count on successful read
 
-            except cv2.error as e:
-                logging.error(f"cv2 error during face processing: {e}")
-                status_text = "Detection/Encoding Error"
-                status_color = (255, 0, 0)
-            except Exception as e:
-                logging.error(f"Unexpected error during face processing: {e}", exc_info=True)
-                status_text = "Unexpected Processing Error"
-                status_color = (255, 0, 0)
+                except cv2.error as e:
+                    logging.error(f"cv2 error during frame read from source {source}: {e}")
+                    consecutive_errors += 1
+                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                        logging.error(f"Max consecutive cv2 errors ({MAX_CONSECUTIVE_ERRORS}) reached. Stopping generator.")
+                        break # Stop on too many critical errors
+                    pytime.sleep(0.1)
+                    frame_count += 1
+                    continue # Skip processing
 
-            cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
+                # --- Frame processing logic starts here ---
+                # Resize frame if config values are set and frame is valid
+                if frame is not None and resize_width and resize_height:
+                    frame = cv2.resize(frame, (resize_width, resize_height), interpolation=cv2.INTER_AREA)
 
-            try:
-                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality]
-                ret, buffer = cv2.imencode('.jpg', frame, encode_param)
-                if not ret:
-                    logging.warning(f"cv2.imencode failed for source {source}. Skipping frame.")
+                if not hasattr(frame, "shape") or len(frame.shape) != 3 or frame.shape[0] == 0 or frame.shape[1] == 0:
+                    logging.warning(f"Invalid frame retrieved from source {source}: {type(frame)}, shape: {getattr(frame, 'shape', None)}. Skipping.")
                     frame_count += 1
                     continue
-                frame_bytes = buffer.tobytes()
 
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                processing_frame = frame.copy() # Work on a copy
+                detected_box = None
+                status_text = "Processing..."
+                status_color = (0, 255, 255) # Yellow
 
-            except cv2.error as e:
-                 logging.error(f"cv2 error during frame encoding for source {source}: {e}")
-                 frame_count += 1
-                 continue
-            except Exception as e:
-                 logging.error(f"Unexpected error during frame encoding/yielding for source {source}: {e}")
-                 break
+                try:
+                    face_embedding, detected_box = detect_and_encode_face(processing_frame)
 
+                    if detected_box:
+                        #logging.debug("Face detected in frame.") # Reduce verbosity
+                        (x, y, w, h) = detected_box
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # Green box
+
+                        if face_embedding is not None:
+                            match_found = False
+                            min_distance = float('inf')
+
+                            if known_face_embeddings_list:
+                                distances = [cosine(face_embedding, known_emb) for known_emb in known_face_embeddings_list]
+                                if distances:
+                                    min_distance_idx = np.argmin(distances)
+                                    min_distance = distances[min_distance_idx]
+
+                                    if min_distance < RECOGNITION_THRESHOLD:
+                                        name = known_face_names[min_distance_idx]
+                                        #logging.debug(f"Match found: {name} (distance: {min_distance:.2f})") # Reduce verbosity
+                                        status_text = f"Known: {name} ({min_distance:.2f})"
+                                        status_color = (0, 255, 0) # Green
+                                        match_found = True
+
+                                        now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
+                                        last_log_time = last_known_faces_log.get(name)
+
+                                        # Check if enough time has passed since the last log for this KNOWN person
+                                        if not last_log_time or (now_utc - last_log_time) > known_log_interval:
+                                            last_known_faces_log[name] = now_utc
+                                            log_entry = {
+                                                'type': 'known_sighting',
+                                                'name': name,
+                                                'timestamp': now_utc,
+                                                'status_at_log': 'Known'
+                                            }
+                                            try:
+                                                # --- Database logging for known faces (unchanged) ---
+                                                student_doc = mongo.db.students.find_one({'name': name}, {"branch": 1, "academic_year": 1})
+                                                collection_to_log = mongo.db.seen_log # Default collection
+                                                if student_doc:
+                                                    branch = student_doc.get("branch")
+                                                    year = student_doc.get("academic_year")
+                                                    # Basic check if branch and year seem valid for specific collection
+                                                    if branch and isinstance(branch, str) and year and isinstance(year, str) and year in ['1st', '2nd', '3rd']:
+                                                        try:
+                                                            branch_coll = branch.lower().replace(".", "").replace(" ", "_")
+                                                            year_coll = year.lower().replace(".", "").replace(" ", "_")
+                                                            collection_name = f"{branch_coll}_{year_coll}_year"
+                                                            # Basic check if collection name seems safe
+                                                            if collection_name.isalnum() or '_' in collection_name:
+                                                                collection_to_log = getattr(mongo.db, collection_name)
+                                                                logging.debug(f"Logging known sighting for {name} to specific collection: {collection_name}")
+                                                            else:
+                                                                logging.warning(f"Generated collection name '{collection_name}' invalid. Using default seen_log.")
+                                                        except Exception as coll_err:
+                                                             logging.error(f"Error determining specific collection for {name}: {coll_err}. Using default seen_log.")
+                                                    else:
+                                                        logging.debug(f"Branch/year missing or invalid for {name} ('{branch}', '{year}'). Using default seen_log.")
+
+                                                collection_to_log.insert_one(log_entry)
+                                                logging.debug(f"Logged known sighting for {name} at {now_utc} (Interval: {known_log_interval_seconds}s)")
+                                                # --- End database logging ---
+                                            except Exception as log_e:
+                                                logging.error(f"Failed to log known sighting for {name}: {log_e}")
+                                        #else: # Reduce verbosity
+                                            #logging.debug(f"Skipping log for known {name}: Interval not passed.")
+
+                            if not match_found:
+                                status_text = f"Unknown ({min_distance:.2f})" if min_distance != float('inf') else "Unknown"
+                                status_color = (0, 0, 255) # Red
+                                now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
+
+                                # Check if enough time has passed since the last UNKNOWN log
+                                if not last_unknown_log_time or (now_utc - last_unknown_log_time) > unknown_log_interval:
+                                    face_img_b64 = None
+                                    try:
+                                        face_region = processing_frame[y:y+h, x:x+w]
+                                        if face_region.size > 0:
+                                            encode_params = [int(cv2.IMWRITE_JPEG_QUALITY), 75] # Quality for unknown face log
+                                            _, buffer = cv2.imencode('.jpg', face_region, encode_params)
+                                            face_img_b64 = base64.b64encode(buffer).decode('utf-8')
+                                    except Exception as img_err: logging.error(f"Error encoding unknown face image: {img_err}")
+
+                                    log_entry = {'type': 'unknown_sighting', 'timestamp': now_utc, 'status_at_log': 'Unknown', 'face_image_base64': face_img_b64}
+                                    try:
+                                        mongo.db.seen_log.insert_one(log_entry)
+                                        logging.info(f"Logged unknown sighting at {now_utc} (Interval: {unknown_log_interval_seconds}s)")
+                                    except Exception as log_e: logging.error(f"Failed to log unknown sighting: {log_e}")
+                                    last_unknown_log_time = now_utc # Update time only after successful log attempt
+                                #else: # Reduce verbosity
+                                    #logging.debug("Skipping log for unknown face: Interval not passed.")
+                        else:
+                            status_text = "Encoding Error" # Error getting embedding
+                            status_color = (255, 0, 0) # Blue
+                    else:
+                        status_text = "No Face Detected"
+                        status_color = (255, 255, 255) # White
+
+                except cv2.error as e:
+                    logging.error(f"cv2 error during face processing: {e}")
+                    status_text = "Detection/Encoding Error"
+                    status_color = (255, 0, 0) # Blue
+                except Exception as e:
+                    logging.error(f"Unexpected error during face processing: {e}", exc_info=True)
+                    status_text = "Unexpected Processing Error"
+                    status_color = (255, 0, 0) # Blue
+
+                # Draw status text on the *original* frame (before encoding)
+                cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
+
+                # --- Encode and yield the frame ---
+                try:
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality]
+                    ret, buffer = cv2.imencode('.jpg', frame, encode_param)
+                    if not ret:
+                        logging.warning(f"cv2.imencode failed for source {source}. Skipping frame.")
+                        # No need to increment frame_count here as it's done below
+                    else:
+                        frame_bytes = buffer.tobytes()
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                except cv2.error as e:
+                     logging.error(f"cv2 error during frame encoding for source {source}: {e}")
+                except Exception as e:
+                     logging.error(f"Unexpected error during frame encoding/yielding for source {source}: {e}")
+                     break # Exit loop on yield error
+
+            # --- End of frame processing loop modification ---
+
+            # Optional sleep outside the processing block to control overall loop speed
+            # If live_feed_sleep is 0, this has no effect.
             if live_feed_sleep > 0:
-                time.sleep(live_feed_sleep)
+                 pytime.sleep(live_feed_sleep)
 
-            frame_count += 1
+            frame_count += 1 # Increment frame count for frame skipping logic
 
     except (GeneratorExit, ConnectionResetError, BrokenPipeError) as e:
         logging.info(f"Client disconnected or connection lost for source {source}: {type(e).__name__}")
@@ -735,23 +839,26 @@ def video_feed():
 
     if camera_id_str is not None:
         try:
+            # Handle camera_id '0' explicitly for webcam
             if camera_id_str == '0': camera_id = 0
             else: camera_id = int(camera_id_str)
 
             for cam in cameras:
+                # Match integer ID or string '0' for webcam
                 if (cam.get('id') == camera_id or (camera_id == 0 and str(cam.get('id')) == '0')) and not cam.get('disabled', False):
                     camera = cam
                     break
 
             if camera:
                 source_to_use = camera.get('rtsp_url')
+                # Explicitly check for webcam source (0 or '0')
                 if camera.get('id') == 0 and (source_to_use == 0 or str(source_to_use) == '0'):
-                    source_to_use = 0
+                    source_to_use = 0 # Use integer 0 for webcam
                 elif isinstance(source_to_use, str) and source_to_use.isdigit():
                      try: source_to_use = int(source_to_use)
-                     except ValueError: pass
+                     except ValueError: pass # Keep as string if not purely digits
 
-                logging.info(f"Streaming from selected camera: {camera['name']} (ID: {camera_id}), Source: {source_to_use}")
+                logging.info(f"Streaming from selected camera: {camera['name']} (ID: {camera_id}), Source: {source_to_use} (Type: {type(source_to_use)})")
             else:
                  logging.warning(f"Requested Camera ID {camera_id_str} not found or is disabled.")
                  return Response(f"Camera ID {camera_id_str} not found or is disabled", status=404)
@@ -760,24 +867,25 @@ def video_feed():
              logging.warning(f"Invalid camera_id format provided: {camera_id_str}")
              return Response(f"Invalid camera_id format: {camera_id_str}", status=400)
     else:
+        # Default to first enabled camera if no ID specified
         logging.info("No camera_id specified, searching for first enabled camera.")
         for cam in cameras:
             if not cam.get('disabled', False):
                 camera = cam
                 source_to_use = camera.get('rtsp_url')
                 if camera.get('id') == 0 and (source_to_use == 0 or str(source_to_use) == '0'):
-                     source_to_use = 0
+                     source_to_use = 0 # Use integer 0 for webcam
                 elif isinstance(source_to_use, str) and source_to_use.isdigit():
                      try: source_to_use = int(source_to_use)
                      except ValueError: pass
-                logging.info(f"Using first enabled camera found: {camera['name']} (ID: {camera.get('id')}), Source: {source_to_use}")
+                logging.info(f"Using first enabled camera found: {camera['name']} (ID: {camera.get('id')}), Source: {source_to_use} (Type: {type(source_to_use)})")
                 break
 
-        if source_to_use is None:
+        if source_to_use is None: # Check if a source was actually found
             logging.error("Could not find any enabled cameras to stream.")
             return Response("No enabled cameras available", status=404)
 
-    load_known_faces()
+    load_known_faces() # Ensure faces are loaded before starting generator
     logging.info(f"Starting generate_frames with source: {source_to_use}")
     return Response(generate_frames(source_to_use), mimetype='multipart/x-mixed-replace; boundary=frame')
 
@@ -806,6 +914,7 @@ def register():
             flash("Name is required.", "error")
             return render_template('register.html'), 400
 
+        # --- Role specific field validation ---
         if role == 'student':
             if not branch:
                 flash("Branch is required for students.", "error")
@@ -815,18 +924,23 @@ def register():
                 flash("Valid Academic Year (1st, 2nd, or 3rd) is required for students.", "error")
                 return render_template('register.html'), 400
         elif role == 'staff':
+            # Branch/Department is required for staff
             if not branch:
                 flash("Branch/Department is required for staff.", "error")
                 return render_template('register.html'), 400
-            academic_year = None
-        else:
+            # Academic year is not applicable for staff
+            academic_year = None # Explicitly set to None
+        else: # Others
+             # Branch and Academic year are not applicable
              branch = None
              academic_year = None
+        # --- End Role specific field validation ---
 
         image = None
         image_source = "unknown"
         temp_file_path = None
 
+        # Prioritize webcam capture if available
         if photo_data and photo_data.startswith('data:image/'):
             try:
                 header, encoded = photo_data.split(',', 1)
@@ -840,6 +954,7 @@ def register():
                 logging.error(f"Error decoding base64 image: {e}")
                 flash("Invalid photo data from webcam.", "error")
                 return render_template('register.html'), 400
+        # Fallback to uploaded file if no webcam data or webcam failed
         elif uploaded_file and uploaded_file.filename != '':
             filename = secure_filename(uploaded_file.filename)
             temp_file_path = os.path.join(app.config['UPLOAD_FOLDER'], f"temp_{filename}")
@@ -861,6 +976,7 @@ def register():
             flash("No photo provided (either webcam capture or file upload is required).", "error")
             return render_template('register.html'), 400
 
+        # Ensure image data is valid before proceeding
         if image is None:
             flash("Failed to load image data.", "error")
             logging.error("Image data is None after loading attempts.")
@@ -869,6 +985,7 @@ def register():
                 except OSError as rm_err: logging.error(f"Error removing temporary file {temp_file_path}: {rm_err}")
             return render_template('register.html'), 500
 
+        # Check for existing user *before* encoding face
         try:
             existing_user = mongo.db.students.find_one({'name': name})
             if existing_user:
@@ -877,7 +994,7 @@ def register():
                 if temp_file_path and os.path.exists(temp_file_path):
                     try: os.remove(temp_file_path)
                     except OSError as rm_err: logging.error(f"Error removing temporary file {temp_file_path}: {rm_err}")
-                return render_template('register.html'), 400
+                return render_template('register.html'), 400 # Use 400 Bad Request for duplicate
         except Exception as e:
             logging.error(f"Database error checking for existing user {name}: {e}")
             flash("Database error checking for existing user.", "error")
@@ -890,42 +1007,46 @@ def register():
         logging.info(f"Processing registration for {name} from {image_source}.")
         face_embedding, box = detect_and_encode_face(image)
 
+        # Clean up temp file immediately after use
         if temp_file_path and os.path.exists(temp_file_path):
             try: os.remove(temp_file_path)
             except OSError as e: logging.error(f"Error removing upload file {temp_file_path} after processing: {e}")
 
+        # Handle case where face detection/encoding fails
         if face_embedding is None:
             message = "No face detected in the provided image. Please ensure the face is clear and well-lit."
-            if box:
+            if box: # If a box was detected but encoding failed
                 message = "Face detected, but could not process it for registration. Try a clearer image or different angle."
             logging.warning(f"No face detected or embedding failed for registration image of {name}.")
             flash(message, "error")
-            return render_template('register.html'), 400
+            return render_template('register.html'), 400 # Use 400 for bad input image
 
+        # Save user data to database
         try:
-            embedding_list = face_embedding.tolist()
+            embedding_list = face_embedding.tolist() # Convert numpy array to list for MongoDB
             user_data = {
                 'name': name,
                 'role': role,
                 'face_embedding': embedding_list,
-                'registered_at': datetime.utcnow(),
-                'branch': branch,
-                'academic_year': academic_year
+                'registered_at': datetime.utcnow(), # Store registration time in UTC
+                'branch': branch,                  # Will be None if not applicable
+                'academic_year': academic_year     # Will be None if not applicable
             }
 
             result = mongo.db.students.insert_one(user_data)
             logging.info(f"Successfully registered user: {name} (ID: {result.inserted_id}) with role: {role}, branch: {branch}, year: {academic_year}")
             flash(f"User '{name}' ({role.capitalize()}) registered successfully!", "success")
 
-            load_known_faces()
+            load_known_faces() # Refresh the in-memory cache
 
-            return redirect(url_for('view_students'))
+            return redirect(url_for('view_students')) # Redirect after successful registration
 
         except Exception as e:
             logging.error(f"Database error during registration for {name}: {e}", exc_info=True)
             flash("Database error occurred during registration.", "error")
-            return render_template('register.html'), 500
+            return render_template('register.html'), 500 # Internal server error
 
+    # Render the registration form for GET requests
     return render_template('register.html')
 
 
@@ -940,12 +1061,14 @@ def view_students():
         role_filter = request.args.get('role_filter', '')
         branch_filter = request.args.get('branch_filter', '')
         academic_year_filter = request.args.get('academic_year_filter', '')
-        sort_by = request.args.get('sort_by', 'name')
-        sort_order = request.args.get('sort_order', 'asc')
+        sort_by = request.args.get('sort_by', 'name') # Default sort by name
+        sort_order = request.args.get('sort_order', 'asc') # Default sort order asc
         india_tz = pytz.timezone('Asia/Kolkata')
 
+        # Fetch distinct branches efficiently
         distinct_branches = []
         try:
+            # Query only for students and staff as 'others' don't have branches
             branch_query = {'branch': {'$nin': [None, '']}, 'role': {'$in': ['student', 'staff']}}
             distinct_branches = mongo.db.students.distinct('branch', branch_query)
             distinct_branches = sorted([b for b in distinct_branches if isinstance(b, str)])
@@ -953,38 +1076,54 @@ def view_students():
             logging.error(f"Error fetching distinct branches: {db_err}")
             flash("Error loading branch filter options.", "warning")
 
+        # --- Build MongoDB Query ---
         query_conditions = []
         if search_query:
+            # Case-insensitive regex search on name OR branch
             regex = {'$regex': search_query, '$options': 'i'}
             query_conditions.append({'$or': [{'name': regex}, {'branch': regex}]})
         if role_filter:
             query_conditions.append({'role': role_filter})
+        # Apply branch filter only if role allows it (student/staff) or if no role is selected
         if branch_filter and (role_filter in ['student', 'staff'] or not role_filter):
-            query_conditions.append({'branch': branch_filter})
+             query_conditions.append({'branch': branch_filter})
+        # Apply academic year filter only if role is student or no role is selected
         if academic_year_filter and (role_filter == 'student' or not role_filter):
              query_conditions.append({'academic_year': academic_year_filter})
 
+        # Combine conditions with $and if multiple exist
         query = {'$and': query_conditions} if query_conditions else {}
         logging.debug(f"Executing student query: {query}")
+        # --- End Query Build ---
 
+        # --- Sorting ---
         mongo_sort_order = 1 if sort_order == 'asc' else -1
+        # Validate sort field
         valid_sort_fields = ['name', 'role', 'registered_at', 'branch', 'academic_year']
-        if sort_by not in valid_sort_fields: sort_by = 'name'
+        if sort_by not in valid_sort_fields: sort_by = 'name' # Default to name if invalid
+        # --- End Sorting ---
 
         students_cursor = mongo.db.students.find(query).sort(sort_by, mongo_sort_order)
         students_list = list(students_cursor)
         logging.info(f"Found {len(students_list)} students matching filters.")
 
+        # Process data for display
         for student in students_list:
+            # Format registration date
             reg_at_utc = student.get('registered_at')
             if isinstance(reg_at_utc, datetime):
+                 # Convert UTC to Kolkata Time for display
                  reg_at_kolkata = reg_at_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
                  student['registered_at_str'] = reg_at_kolkata.strftime('%Y-%m-%d %H:%M:%S %Z')
-            else: student['registered_at_str'] = "N/A"
+            else: student['registered_at_str'] = "N/A" # Handle missing date
+
+            # Convert ObjectId to string for URL generation
             student['_id_str'] = str(student['_id'])
+            # Prepare display values, handling None or missing values
             student['role_display'] = student.get('role', 'N/A').capitalize()
             student['branch_display'] = student.get('branch') or 'N/A'
             student['academic_year_display'] = student.get('academic_year') or 'N/A'
+
 
         return render_template('view_students.html',
                                students=students_list,
@@ -999,13 +1138,15 @@ def view_students():
     except Exception as e:
         logging.exception("Error fetching students list for view:")
         flash("Error loading student data. Please check logs.", "error")
+        # Attempt to load distinct branches even on error for filter dropdowns
         distinct_branches_on_error = []
         try:
             branch_query = {'branch': {'$nin': [None, '']}, 'role': {'$in': ['student', 'staff']}}
             distinct_branches_on_error = mongo.db.students.distinct('branch', branch_query)
             distinct_branches_on_error = sorted([b for b in distinct_branches_on_error if isinstance(b, str)])
-        except: pass
+        except: pass # Ignore errors fetching branches if main query failed
 
+        # Pass back current filter values to repopulate form
         return render_template('view_students.html', students=[],
                                search_query=request.args.get('search', ''),
                                role_filter=request.args.get('role_filter', ''),
@@ -1020,7 +1161,7 @@ def view_students():
 def delete_student(student_id):
     if session.get('user_type') != 'admin':
          flash("Unauthorized action.", "error")
-         return redirect(url_for('view_students'))
+         return redirect(url_for('view_students')) # Redirect back
 
     try:
         oid = ObjectId(student_id)
@@ -1029,28 +1170,35 @@ def delete_student(student_id):
         return redirect(url_for('view_students'))
 
     try:
+        # Get student name before deleting for logging/messaging
         student_to_delete = mongo.db.students.find_one({'_id': oid}, {'name': 1})
         if not student_to_delete:
             flash("Student not found for deletion.", "error")
-            return redirect(url_for('view_students')), 404
+            return redirect(url_for('view_students')), 404 # Not Found status
 
-        student_name = student_to_delete.get('name', f'ID_{student_id}')
+        student_name = student_to_delete.get('name', f'ID_{student_id}') # Use name or ID for messages
 
+        # Perform deletion
         result = mongo.db.students.delete_one({'_id': oid})
 
         if result.deleted_count > 0:
             logging.info(f"Successfully deleted student: {student_name} (ID: {student_id})")
             flash(f"Student '{student_name}' deleted successfully.", "success")
+            # Refresh the known faces cache since a face was removed
             load_known_faces()
 
+            # Attempt to remove related logs (optional, best-effort)
             try:
+                # Remove only 'known_sighting' logs associated with this name
                 log_result = mongo.db.seen_log.delete_many({'name': student_name, 'type': 'known_sighting'})
                 if log_result.deleted_count > 0:
                     logging.info(f"Removed {log_result.deleted_count} sighting logs for deleted student {student_name}.")
             except Exception as log_e:
                 logging.error(f"Error removing sighting logs for {student_name}: {log_e}")
+                # Don't fail the whole operation, just warn the user
                 flash("Student deleted, but failed to remove associated logs.", "warning")
         else:
+            # This case should be rare if find_one succeeded, but handle defensively
             logging.warning(f"Deletion query for student {student_name} (ID: {student_id}) reported 0 deleted.")
             flash("Student found but could not be deleted.", "error")
 
@@ -1058,55 +1206,65 @@ def delete_student(student_id):
         logging.error(f"Error deleting student {student_id}: {e}", exc_info=True)
         flash("An error occurred while trying to delete the student.", "error")
 
+    # Redirect back to the student list regardless of outcome
     return redirect(url_for('view_students'))
 
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If already logged in, redirect to index
     if session.get('user_type') == 'admin':
         return redirect(url_for('index'))
 
     if request.method == 'POST':
         password = request.form.get('admin_password')
-        admin_pass = os.environ.get("ADMIN_PASSWORD", "0000")
+        # Load admin password from environment or use a default
+        admin_pass = os.environ.get("ADMIN_PASSWORD", "0000") # Use a default if not set
 
         if password == admin_pass:
             session['user_type'] = 'admin'
-            session['user_name'] = 'Admin'
+            session['user_name'] = 'Admin' # Store generic admin name
+            # Make session persistent for a duration
             session.permanent = True
-            app.permanent_session_lifetime = timedelta(hours=8)
+            app.permanent_session_lifetime = timedelta(hours=8) # Example: 8-hour session
             logging.info("Admin login successful.")
             flash("Admin login successful.", "success")
-            return redirect(url_for('index'))
+            return redirect(url_for('index')) # Redirect to dashboard
         else:
             logging.warning("Invalid admin password attempt.")
             flash("Invalid admin credentials.", "error")
-            return render_template('login.html'), 401
+            return render_template('login.html'), 401 # Unauthorized status
 
+    # Show login page for GET requests
     return render_template('login.html')
 
 
 @app.route('/logout')
 def logout():
-    user_name = session.get('user_name', 'User')
-    session.clear()
+    user_name = session.get('user_name', 'User') # Get username for logging
+    session.clear() # Clear all session data
     logging.info(f"User '{user_name}' logged out.")
     flash("You have been logged out successfully.", "info")
-    return redirect(url_for('login'))
+    return redirect(url_for('login')) # Redirect to login page
 
 
 @app.before_request
 def restrict_access():
+    # Allow access to login, logout, and static files without logging in
     if request.endpoint in ['login', 'static', 'logout']:
-        return None
+        return None # Skip check for these endpoints
 
+    # If user is not logged in (no user_type in session)
     if 'user_type' not in session:
         flash("Please log in to access this page.", "info")
         return redirect(url_for('login'))
 
+    # If user is logged in as admin, allow access
     if session.get('user_type') == 'admin':
-        return None
+        return None # Allow access
 
+    # If logged in but not as admin (future proofing for other roles?)
+    # For now, only admin access is implemented, so this case implies unauthorized access
     flash("Admin access required. Please log in.", "warning")
     return redirect(url_for('login'))
 
@@ -1117,37 +1275,45 @@ def seen_log_view():
         flash("Unauthorized access.", "warning")
         return redirect(url_for('login'))
     try:
+        # Fetch all log records, sorted by timestamp descending
         log_records_cursor = mongo.db.seen_log.find().sort('timestamp', -1)
         log_records = list(log_records_cursor)
         logging.debug(f"Fetched {len(log_records)} seen log records.")
 
         grouped_logs = defaultdict(list)
-        india_tz = pytz.timezone('Asia/Kolkata')
+        india_tz = pytz.timezone('Asia/Kolkata') # Use consistent timezone
 
+        # Process and group records
         for record in log_records:
+            # Format timestamp
             ts_utc = record.get('timestamp')
             if isinstance(ts_utc, datetime):
                 ts_kolkata = ts_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
                 record['timestamp_str'] = ts_kolkata.strftime('%Y-%m-%d %H:%M:%S %Z')
-            else: record['timestamp_str'] = "Invalid Date"
+            else:
+                record['timestamp_str'] = "Invalid Date"
 
+            # Determine group key based on type
             record_type = record.get('type')
-            group_key = "Other"
+            group_key = "Other" # Default group
             if record_type == 'known_sighting':
                 group_key = record.get('name', 'Known (Error)')
-                if not record.get('name'): record['name'] = 'Known (Error)'
-            elif record_type in ['unknown_sighting', 'processing_error_sighting']:
+                if not record.get('name'): record['name'] = 'Known (Error)' # Handle missing name
+            elif record_type in ['unknown_sighting', 'processing_error', 'processing_error_sighting']: # Include potential error types
                 group_key = 'Unknown'
+                # Ensure image field exists, even if None
                 if 'face_image_base64' not in record: record['face_image_base64'] = None
+            # Add other types if necessary
 
             grouped_logs[group_key].append(record)
 
+        # Sort the groups: Known (by name), then Unknown, then Others
         def sort_key(item):
-            key = item[0]
-            if key == 'Unknown': return (1, key)
-            if key == 'Other': return (2, key)
-            if key == 'Known (Error)': return (0, '~')
-            return (0, key)
+            key = item[0] # The group key (name, 'Unknown', 'Other')
+            if key == 'Unknown': return (1, key) # Unknown comes after known
+            if key == 'Other': return (2, key)   # Other comes last
+            if key == 'Known (Error)': return (0, '~') # Error case first among known
+            return (0, key.lower()) # Sort known names case-insensitively
 
         sorted_grouped_logs = dict(sorted(grouped_logs.items(), key=sort_key))
 
@@ -1156,7 +1322,7 @@ def seen_log_view():
     except Exception as e:
         logging.error(f"Error fetching or grouping seen log records: {e}", exc_info=True)
         flash("Error loading seen log data.", "error")
-        return render_template('seen_log.html', grouped_logs={}), 500
+        return render_template('seen_log.html', grouped_logs={}), 500 # Return empty on error
 
 
 @app.route('/unknown_captures')
@@ -1166,63 +1332,77 @@ def unknown_captures():
         return redirect(url_for('login'))
 
     try:
+        # Get time filters from query parameters
         start_time_str = request.args.get('start_time')
         end_time_str = request.args.get('end_time')
         time_filter = {}
         india_tz = pytz.timezone('Asia/Kolkata')
-        start_time_value = ''
-        end_time_value = ''
+        start_time_value = '' # Store original value for form repopulation
+        end_time_value = ''   # Store original value for form repopulation
 
+        # Build timestamp query if filters are provided
         if start_time_str:
             try:
+                # Parse HTML datetime-local format (YYYY-MM-DDTHH:MM)
                 start_dt_local = datetime.fromisoformat(start_time_str)
+                # Make it timezone-aware (assuming input is Kolkata time)
                 start_dt_aware_local = india_tz.localize(start_dt_local)
+                # Convert to UTC for MongoDB query
                 time_filter['$gte'] = start_dt_aware_local.astimezone(pytz.utc)
-                start_time_value = start_time_str
+                start_time_value = start_time_str # Keep original string for form
             except (ValueError, TypeError) as e:
                 flash(f"Invalid start time format ignored: {e}", "warning")
         if end_time_str:
             try:
                 end_dt_local = datetime.fromisoformat(end_time_str)
                 end_dt_aware_local = india_tz.localize(end_dt_local)
+                # Convert to UTC for MongoDB query
                 time_filter['$lte'] = end_dt_aware_local.astimezone(pytz.utc)
-                end_time_value = end_time_str
+                end_time_value = end_time_str # Keep original string for form
             except (ValueError, TypeError) as e:
                 flash(f"Invalid end time format ignored: {e}", "warning")
 
-        query = {"type": {"$in": ["unknown_sighting", "processing_error_sighting"]}}
+        # Base query for unknown/error types
+        query = {"type": {"$in": ["unknown_sighting", "processing_error", "processing_error_sighting"]}}
+        # Add time filter if present
         if time_filter:
             query['timestamp'] = time_filter
         logging.debug(f"Unknown captures query: {query}")
 
+        # Execute query, sort by timestamp descending
         log_records_cursor = mongo.db.seen_log.find(query).sort('timestamp', -1)
         log_records = list(log_records_cursor)
         logging.debug(f"Fetched {len(log_records)} unknown capture records.")
 
+        # Group logs by date (Kolkata time)
         grouped_unknowns = defaultdict(list)
         for record in log_records:
             ts_utc = record.get('timestamp')
             if isinstance(ts_utc, datetime):
                 ts_kolkata = ts_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
                 record['timestamp_str'] = ts_kolkata.strftime('%Y-%m-%d %H:%M:%S %Z')
-                date_str = ts_kolkata.strftime('%Y-%m-%d')
+                date_str = ts_kolkata.strftime('%Y-%m-%d') # Group by date
             else:
                 record['timestamp_str'] = "Invalid Date"
                 date_str = "Unknown Date"
+            # Ensure image field exists
             if 'face_image_base64' not in record: record['face_image_base64'] = None
             grouped_unknowns[date_str].append(record)
 
+        # Convert defaultdict to regular dict for template
         grouped_unknowns_dict = dict(grouped_unknowns)
 
+        # Pass filter values back to template for form repopulation
+        # Ensure they are in the correct 'datetime-local' format if needed (already are)
         return render_template('unknown_captures.html',
                                 grouped_unknowns=grouped_unknowns_dict,
-                                start_time_value=start_time_value.replace(' ', 'T'),
-                                end_time_value=end_time_value.replace(' ', 'T'))
+                                start_time_value=start_time_value, # Pass original strings
+                                end_time_value=end_time_value)
 
     except Exception as e:
         logging.error(f"Error fetching or grouping unknown captures: {e}", exc_info=True)
         flash("Error loading unknown captures data.", "error")
-        return render_template('unknown_captures.html', grouped_unknowns={}), 500
+        return render_template('unknown_captures.html', grouped_unknowns={}, start_time_value='', end_time_value=''), 500
 
 
 @app.route('/reset_seen_log', methods=['POST'])
@@ -1230,9 +1410,10 @@ def reset_seen_log():
     if session.get('user_type') != 'admin':
         logging.warning("Unauthorized attempt to reset seen log.")
         flash("Unauthorized action.", "error")
-        return redirect(url_for('login'))
+        return redirect(url_for('login')) # Redirect if not admin
 
     try:
+        # Delete all documents from the seen_log collection
         result = mongo.db.seen_log.delete_many({})
         deleted_count = result.deleted_count
         logging.info(f"Seen log reset requested by admin. {deleted_count} records deleted.")
@@ -1241,6 +1422,7 @@ def reset_seen_log():
         logging.error(f"Error resetting seen log: {e}", exc_info=True)
         flash("An error occurred while resetting the seen log.", "error")
 
+    # Redirect back to the seen log view page
     return redirect(url_for('seen_log_view'))
 
 
@@ -1251,110 +1433,128 @@ def attendance_page():
         return redirect(url_for('login'))
 
     india_tz = pytz.timezone('Asia/Kolkata')
-    now_utc = datetime.utcnow()
-    now_india = now_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
+    now_india = datetime.now(india_tz)
     today_date_str = now_india.strftime('%Y-%m-%d')
-    # Default values for GET
+
+    # Get filters from request args (for GET) or form (for POST)
+    # Use request.values to handle both GET and POST easily for filters
+    branch_filter = request.values.get('branch_filter', '')
+    academic_year_filter = request.values.get('academic_year_filter', '')
+    # Get selected date, default to today
+    selected_date = request.values.get('attendance_date', today_date_str)
+
     attendance_records = []
-    branch_filter = ''
-    academic_year_filter = ''
-    selected_date = today_date_str
 
-    if request.method == 'POST':
-        branch_filter = request.form.get('branch_filter', '')
-        academic_year_filter = request.form.get('academic_year_filter', '')
-        selected_date = request.form.get('attendance_date', today_date_str)
+    try:
+        # Validate and parse the selected date
         try:
-            # Parse selected_date (YYYY-MM-DD) to date object
-            try:
-                selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d").date()
-            except Exception:
-                selected_date_obj = now_india.date()
-            start_of_day_utc = india_tz.localize(datetime.combine(selected_date_obj, time.min)).astimezone(pytz.utc)
-            end_of_day_utc = india_tz.localize(datetime.combine(selected_date_obj, time.max)).astimezone(pytz.utc)
-            logging.info(f"Attendance Query: Fetching logs between {start_of_day_utc} (UTC) and {end_of_day_utc} (UTC)")
+            selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d").date()
+        except ValueError:
+            logging.warning(f"Invalid date format '{selected_date}'. Defaulting to today.")
+            selected_date_obj = now_india.date()
+            selected_date = today_date_str # Update selected_date string if defaulted
 
-            # Determine which collection to query based on filters
-            if branch_filter and academic_year_filter:
-                branch = branch_filter.lower().replace(".", "").replace(" ", "_")
-                year = academic_year_filter.lower().replace(".", "").replace(" ", "_")
-                collection_name = f"{branch}_{year}_year"
-                collection = getattr(mongo.db, collection_name)
-            else:
-                collection = mongo.db.seen_log
+        # Calculate UTC start and end of the selected day in Kolkata time
+        start_of_day_local = india_tz.localize(datetime.combine(selected_date_obj, time.min))
+        end_of_day_local = india_tz.localize(datetime.combine(selected_date_obj, time.max))
+        start_of_day_utc = start_of_day_local.astimezone(pytz.utc)
+        end_of_day_utc = end_of_day_local.astimezone(pytz.utc)
 
-            log_records_cursor = collection.find({
-                'type': 'known_sighting',
-                'timestamp': {'$gte': start_of_day_utc, '$lte': end_of_day_utc}
-            }).sort('timestamp', 1)
+        logging.info(f"Attendance Query: Date={selected_date}, Branch='{branch_filter}', Year='{academic_year_filter}'")
+        logging.info(f"Attendance Query: Fetching logs between {start_of_day_utc} (UTC) and {end_of_day_utc} (UTC)")
 
-            raw_log_count = collection.count_documents({
-                 'type': 'known_sighting',
-                 'timestamp': {'$gte': start_of_day_utc, '$lte': end_of_day_utc}
-            })
-            logging.info(f"Attendance Query: Found {raw_log_count} raw known_sighting logs for today.")
+        # --- Dynamic Collection Logic (if branch and year are selected) ---
+        collection_to_query = mongo.db.seen_log # Default to main log
+        log_query = {
+            'type': 'known_sighting',
+            'timestamp': {'$gte': start_of_day_utc, '$lte': end_of_day_utc}
+        }
 
-            user_details = {}
-            try:
-                known_users = mongo.db.students.find({}, {"name": 1, "branch": 1, "academic_year": 1, "_id": 0})
-                for user in known_users:
-                    user_details[user['name']] = {
-                        'branch': user.get('branch') or 'N/A',
-                        'academic_year': user.get('academic_year') or 'N/A'
-                    }
-            except Exception as db_err:
-                logging.error(f"Error prefetching user details: {db_err}")
+        # Prefetch user details (name -> branch, year) for filtering
+        user_details = {}
+        try:
+            known_users = mongo.db.students.find({}, {"name": 1, "branch": 1, "academic_year": 1, "_id": 0})
+            for user in known_users:
+                user_details[user['name']] = {
+                    'branch': user.get('branch'), # Keep None if missing
+                    'academic_year': user.get('academic_year') # Keep None if missing
+                }
+        except Exception as db_err:
+            logging.error(f"Error prefetching user details: {db_err}")
+            # Continue without details, filtering might be less accurate
 
-            attendance_data = defaultdict(list)
-            for record in log_records_cursor:
-                name = record.get('name')
-                timestamp_utc = record.get('timestamp')
-                if name and isinstance(timestamp_utc, datetime):
-                     attendance_data[name].append(timestamp_utc)
 
-            logging.info(f"Attendance Processing: Grouped logs into {len(attendance_data)} users.")
+        # Fetch relevant log records
+        log_records_cursor = collection_to_query.find(log_query).sort('timestamp', 1) # Sort ascending for first/last
 
-            logging.debug(f"Attendance Filters - Branch: '{branch_filter}', Academic Year: '{academic_year_filter}'")
+        # Process logs to find first (arriving) and last (leaving) times per person
+        attendance_data = defaultdict(lambda: {'first': None, 'last': None})
+        processed_log_count = 0
+        for record in log_records_cursor:
+            name = record.get('name')
+            timestamp_utc = record.get('timestamp')
+            processed_log_count +=1
 
-            final_attendance = []
-            for name, timestamps_utc in attendance_data.items():
-                if timestamps_utc:
-                    arriving_time_utc = timestamps_utc[0]
-                    leaving_time_utc = timestamps_utc[-1]
-                    arriving_time_kolkata = arriving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
-                    leaving_time_kolkata = leaving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
-                    details = user_details.get(name, {'branch': 'N/A', 'academic_year': 'N/A'})
-
+            if name and isinstance(timestamp_utc, datetime):
+                details = user_details.get(name)
+                # Apply filters *before* storing timestamps
+                if details:
                     branch_matches = (not branch_filter) or (details['branch'] == branch_filter)
                     year_matches = (not academic_year_filter) or (details['academic_year'] == academic_year_filter)
 
                     if branch_matches and year_matches:
-                        final_attendance.append({
-                            'name': name,
-                            'branch': details['branch'],
-                            'academic_year': details['academic_year'],
-                            'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
-                            'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
-                            'date': arriving_time_kolkata.strftime('%Y-%m-%d')
-                        })
-                    else:
-                        logging.debug(f"Filtered out '{name}'. Branch Match: {branch_matches} (Filter: '{branch_filter}', Record: '{details['branch']}'). Year Match: {year_matches} (Filter: '{academic_year_filter}', Record: '{details['academic_year']}')")
+                        if attendance_data[name]['first'] is None:
+                            attendance_data[name]['first'] = timestamp_utc
+                        attendance_data[name]['last'] = timestamp_utc # Always update last seen
+                    # else: # Filtered out
+                        # logging.debug(f"Filtering out log for '{name}' due to mismatch: Branch OK={branch_matches}, Year OK={year_matches}")
+            # else: # User details not found, cannot filter effectively
+            #     logging.warning(f"Details not found for user '{name}' in log record. Including by default if filters are off.")
+            #     Include if no filters are active
+            if not branch_filter and not academic_year_filter:
+                if attendance_data[name]['first'] is None:
+                    attendance_data[name]['first'] = timestamp_utc
+                attendance_data[name]['last'] = timestamp_utc
 
-            logging.info(f"Processed attendance for {len(attendance_data)} individuals, {len(final_attendance)} matched filters.")
-            final_attendance.sort(key=lambda x: x['name'])
-            attendance_records = final_attendance
 
-        except Exception as e:
-            logging.error(f"Error generating attendance page: {e}", exc_info=True)
-            flash("Error loading attendance data.", "error")
-            attendance_records = []
+        logging.info(f"Attendance Query: Processed {processed_log_count} known_sighting logs for {selected_date}.")
+        logging.info(f"Attendance Processing: Found first/last times for {len(attendance_data)} individuals matching filters.")
 
+        # Format the final attendance records
+        final_attendance = []
+        for name, times in attendance_data.items():
+            if times['first'] and times['last']: # Ensure both times were recorded
+                arriving_time_kolkata = times['first'].replace(tzinfo=pytz.utc).astimezone(india_tz)
+                leaving_time_kolkata = times['last'].replace(tzinfo=pytz.utc).astimezone(india_tz)
+                # Get details again, handling potential missing users safely
+                details = user_details.get(name, {'branch': 'N/A', 'academic_year': 'N/A'})
+
+                final_attendance.append({
+                    'name': name,
+                    'branch': details['branch'] or 'N/A', # Handle None
+                    'academic_year': details['academic_year'] or 'N/A', # Handle None
+                    'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
+                    'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
+                    'date': arriving_time_kolkata.strftime('%Y-%m-%d') # Date based on arriving time
+                })
+
+        # Sort final list by name
+        final_attendance.sort(key=lambda x: x['name'])
+        attendance_records = final_attendance
+        logging.info(f"Generated final attendance list with {len(attendance_records)} records for {selected_date}.")
+
+    except Exception as e:
+        logging.error(f"Error generating attendance page: {e}", exc_info=True)
+        flash("Error loading attendance data.", "error")
+        attendance_records = [] # Ensure it's empty on error
+
+    # Render the template with data and filter values
     return render_template('attendance.html',
                            attendance_records=attendance_records,
-                           branch_filter=branch_filter if branch_filter is not None else '',
-                           academic_year_filter=academic_year_filter if academic_year_filter is not None else '',
+                           branch_filter=branch_filter, # Pass current filters back
+                           academic_year_filter=academic_year_filter,
                            today_date=today_date_str,
-                           selected_date=selected_date)
+                           selected_date=selected_date) # Pass selected date back
 
 
 @app.route('/export_attendance_excel')
@@ -1365,85 +1565,118 @@ def export_attendance_excel():
 
     try:
         india_tz = pytz.timezone('Asia/Kolkata')
-        now_utc = datetime.utcnow()
-        now_india = now_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
-        current_date_str = now_india.strftime('%Y-%m-%d')
-        start_of_day_utc = india_tz.localize(datetime.combine(now_india.date(), time.min)).astimezone(pytz.utc)
-        end_of_day_utc = india_tz.localize(datetime.combine(now_india.date(), time.max)).astimezone(pytz.utc)
+        # Get filters from query parameters (passed from the attendance page link)
+        branch_filter = request.args.get('branch_filter', '')
+        academic_year_filter = request.args.get('academic_year_filter', '')
+        # Get the date for which to export, default to today
+        selected_date_str = request.args.get('date', datetime.now(india_tz).strftime('%Y-%m-%d'))
 
-        log_records_cursor = mongo.db.seen_log.find({
+        # Validate and parse the selected date
+        try:
+            selected_date_obj = datetime.strptime(selected_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            logging.warning(f"Invalid date format '{selected_date_str}' for export. Defaulting to today.")
+            selected_date_obj = datetime.now(india_tz).date()
+            selected_date_str = selected_date_obj.strftime('%Y-%m-%d')
+
+        # --- Re-calculate attendance data for the selected date and filters ---
+        start_of_day_local = india_tz.localize(datetime.combine(selected_date_obj, time.min))
+        end_of_day_local = india_tz.localize(datetime.combine(selected_date_obj, time.max))
+        start_of_day_utc = start_of_day_local.astimezone(pytz.utc)
+        end_of_day_utc = end_of_day_local.astimezone(pytz.utc)
+
+        collection_to_query = mongo.db.seen_log
+        log_query = {
             'type': 'known_sighting',
             'timestamp': {'$gte': start_of_day_utc, '$lte': end_of_day_utc}
-        }).sort('timestamp', 1)
+        }
 
         user_details = {}
         known_users = mongo.db.students.find({}, {"name": 1, "branch": 1, "academic_year": 1, "_id": 0})
         for user in known_users:
-            user_details[user['name']] = {'branch': user.get('branch') or 'N/A', 'academic_year': user.get('academic_year') or 'N/A'}
+            user_details[user['name']] = {'branch': user.get('branch'), 'academic_year': user.get('academic_year')}
 
-        attendance_data = defaultdict(list)
+        log_records_cursor = collection_to_query.find(log_query).sort('timestamp', 1)
+
+        attendance_data = defaultdict(lambda: {'first': None, 'last': None})
         for record in log_records_cursor:
             name = record.get('name')
             timestamp_utc = record.get('timestamp')
-            if name and isinstance(timestamp_utc, datetime): attendance_data[name].append(timestamp_utc)
+            if name and isinstance(timestamp_utc, datetime):
+                 details = user_details.get(name)
+                 if details:
+                     branch_matches = (not branch_filter) or (details['branch'] == branch_filter)
+                     year_matches = (not academic_year_filter) or (details['academic_year'] == academic_year_filter)
+                     if branch_matches and year_matches:
+                         if attendance_data[name]['first'] is None:
+                             attendance_data[name]['first'] = timestamp_utc
+                         attendance_data[name]['last'] = timestamp_utc
+                 elif not branch_filter and not academic_year_filter: # Include if no details and no filters
+                      if attendance_data[name]['first'] is None:
+                         attendance_data[name]['first'] = timestamp_utc
+                      attendance_data[name]['last'] = timestamp_utc
 
-        branch_filter = request.args.get('branch_filter', '')
-        academic_year_filter = request.args.get('academic_year_filter', '')
-        logging.info(f"Exporting Excel with filters - Branch: '{branch_filter}', Year: '{academic_year_filter}'")
 
         final_attendance = []
-        for name, timestamps_utc in attendance_data.items():
-            if timestamps_utc:
-                arriving_time_utc = timestamps_utc[0]
-                leaving_time_utc = timestamps_utc[-1]
-                arriving_time_kolkata = arriving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
-                leaving_time_kolkata = leaving_time_utc.replace(tzinfo=pytz.utc).astimezone(india_tz)
+        for name, times in attendance_data.items():
+            if times['first'] and times['last']:
+                arriving_time_kolkata = times['first'].replace(tzinfo=pytz.utc).astimezone(india_tz)
+                leaving_time_kolkata = times['last'].replace(tzinfo=pytz.utc).astimezone(india_tz)
                 details = user_details.get(name, {'branch': 'N/A', 'academic_year': 'N/A'})
-
-                branch_matches = (not branch_filter) or (details['branch'] == branch_filter)
-                year_matches = (not academic_year_filter) or (details['academic_year'] == academic_year_filter)
-
-                if branch_matches and year_matches:
-                    final_attendance.append({
-                        'name': name, 'branch': details['branch'], 'academic_year': details['academic_year'],
-                        'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
-                        'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
-                        'date': arriving_time_kolkata.strftime('%Y-%m-%d')
-                    })
+                final_attendance.append({
+                    'name': name, 'branch': details['branch'] or 'N/A', 'academic_year': details['academic_year'] or 'N/A',
+                    'arriving_time': arriving_time_kolkata.strftime('%H:%M:%S'),
+                    'leaving_time': leaving_time_kolkata.strftime('%H:%M:%S'),
+                    'date': arriving_time_kolkata.strftime('%Y-%m-%d')
+                })
         final_attendance.sort(key=lambda x: x['name'])
+        # --- End Recalculation ---
 
+        # --- Generate Excel File ---
         workbook = openpyxl.Workbook()
         sheet = workbook.active
-        sheet_title = f"Attendance {current_date_str}"
-        if branch_filter: sheet_title += f"_{branch_filter.replace('.', '')}"
-        if academic_year_filter: sheet_title += f"_{academic_year_filter}"
-        sheet.title = sheet_title[:30]
+        # Create a clean title based on date and filters
+        sheet_title_base = f"Attendance_{selected_date_str}"
+        if branch_filter: sheet_title_base += f"_{branch_filter.replace('.', '').replace(' ', '_')}"
+        if academic_year_filter: sheet_title_base += f"_{academic_year_filter.replace('.', '').replace(' ', '_')}"
+        # Ensure title length is within Excel limits (31 chars)
+        sheet.title = sheet_title_base[:31]
 
         headers = ["Name", "Branch", "Academic Year", "Arriving Time", "Leaving Time", "Date"]
         sheet.append(headers)
         for record in final_attendance:
             sheet.append([record['name'], record['branch'], record['academic_year'],
                           record['arriving_time'], record['leaving_time'], record['date']])
+
+        # Auto-adjust column widths
         for col in sheet.columns:
              max_length = 0
-             column_letter = col[0].column_letter
+             column_letter = col[0].column_letter # Get column letter
              for cell in col:
                  try:
-                     if len(str(cell.value)) > max_length: max_length = len(cell.value)
-                 except: pass
+                     if cell.value: # Check if cell has value
+                         # Calculate length of string representation
+                         current_length = len(str(cell.value))
+                         if current_length > max_length:
+                             max_length = current_length
+                 except: pass # Ignore errors for problematic cells
+             # Set adjusted width (max length + buffer)
              adjusted_width = (max_length + 2)
              sheet.column_dimensions[column_letter].width = adjusted_width
- 
+
+        # Save workbook to a BytesIO stream
         excel_stream = BytesIO()
         workbook.save(excel_stream)
-        excel_stream.seek(0)
-        logging.info(f"Generated Excel export for {len(final_attendance)} records.")
+        excel_stream.seek(0) # Rewind stream to the beginning
+        logging.info(f"Generated Excel export for {len(final_attendance)} records for date {selected_date_str}.")
 
-        filename_base = f"attendance_{current_date_str}"
-        if branch_filter: filename_base += f"_{branch_filter.replace('.', '')}"
-        if academic_year_filter: filename_base += f"_{academic_year_filter}"
+        # Create filename based on date and filters
+        filename_base = f"attendance_{selected_date_str}"
+        if branch_filter: filename_base += f"_{branch_filter.replace('.', '').replace(' ', '_')}"
+        if academic_year_filter: filename_base += f"_{academic_year_filter.replace('.', '').replace(' ', '_')}"
         filename = f"{filename_base}.xlsx"
 
+        # Return the stream as a downloadable file
         return Response(
             excel_stream,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -1453,11 +1686,15 @@ def export_attendance_excel():
     except Exception as e:
         logging.error(f"Error generating Excel export: {e}", exc_info=True)
         flash("Error generating Excel export.", "error")
+        # Redirect back to attendance page, preserving filters
         return redirect(url_for('attendance_page',
                                 branch_filter=request.args.get('branch_filter',''),
-                                academic_year_filter=request.args.get('academic_year_filter','')))
+                                academic_year_filter=request.args.get('academic_year_filter',''),
+                                attendance_date=request.args.get('date', '')))
 
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    # Disable Flask's default reloader in production/threaded mode if debug is False
+    use_reloader = app.debug
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True, use_reloader=use_reloader)

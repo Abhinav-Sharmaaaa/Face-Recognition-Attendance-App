@@ -49,6 +49,13 @@
                     <span title="How long (in seconds) to wait before logging the same unknown person again. Minimum 1 second." style="cursor:help;">&#9432;</span>
                     <div style="font-size:0.95em;color:#555;">Example: 60 = log the same unknown person at most once per minute.</div>
                 </div>
+                <div style="margin-top:0.5em;">
+                    <label for="known_log_interval_seconds"><b>Known Log Interval (seconds):</b></label>
+                    <input type="number" id="known_log_interval_seconds" name="known_log_interval_seconds"
+                           value="{{ known_log_interval_seconds | default(60) }}" min="1" required>
+                    <span title="How long (in seconds) to wait before logging the same known person again. Minimum 1 second." style="cursor:help;">&#9432;</span>
+                    <div style="font-size:0.95em;color:#555;">Example: 60 = log the same known person at most once per minute.</div>
+                </div>
             </fieldset>
 
             <fieldset style="margin-bottom:1.5em;">
