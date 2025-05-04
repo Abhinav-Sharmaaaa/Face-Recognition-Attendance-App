@@ -7,7 +7,7 @@
         "username": "",
         "password": "",
         "rtsp_url": 0,
-        "disabled": true
+        "disabled": false
     },
     {
         "id": 1,
@@ -17,6 +17,16 @@
         "username": "Admin1",
         "password": "123456",
         "rtsp_url": "rtsp://Admin1:123456@192.168.137.28:554/stream1",
+        "disabled": true
+    },
+    {
+        "id": 2,
+        "name": "chotu cam",
+        "ip": "192.168.137.67",
+        "port": 554,
+        "username": "Admin1",
+        "password": "123456",
+        "rtsp_url": "rtsp://Admin1:123456@192.168.137.67/stream1",
         "disabled": false
     }
 ]

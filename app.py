@@ -83,6 +83,7 @@ def load_config():
         "stop_time_enabled": False,
         "unknown_face_timeout": 5,
         "unknown_log_interval_seconds": 60,
+        "known_log_interval_seconds": 60, # Default known log interval
         "academic_year": "",
         "process_every_n_frames": 10, # Default frame skip
         "live_feed_sleep": 0.0,        # Default sleep time (0 means no artificial delay)
@@ -359,7 +360,7 @@ def configure():
         cameras=cameras
     )
 
-RECOGNITION_THRESHOLD = 0.36
+RECOGNITION_THRESHOLD = 0.50
 
 def load_known_faces():
     global known_face_data, known_face_embeddings_list, known_face_names
@@ -512,6 +513,15 @@ def live_feed():
     return render_template('live_feed.html', cameras=enabled_cameras)
 
 
+# -*- coding: utf-8 -*-
+# Replace the existing generate_frames function in your app.py with this one.
+# Imports and other parts of the file remain the same.
+
+# -*- coding: utf-8 -*-
+# Replace the existing generate_frames function in your app.py with this one.
+# Ensure RECOGNITION_THRESHOLD is set appropriately near the top of your file.
+# Imports and other parts of the file remain the same.
+
 def generate_frames(source):
     logging.info(f"generate_frames started for source: {source}")
     logging.info(f"Known faces loaded: {len(known_face_names)}")
@@ -519,7 +529,6 @@ def generate_frames(source):
 
     stop_time_enabled = config.get('stop_time_enabled', False)
     stop_time_str = config.get('stop_time')
-    # Ensure process_every_n_frames is at least 1
     process_every_n_frames = max(1, config.get('process_every_n_frames', 1))
     live_feed_sleep = max(0.0, config.get('live_feed_sleep', 0.0))
     jpeg_quality = max(1, min(100, config.get('jpeg_quality', 60)))
@@ -528,13 +537,12 @@ def generate_frames(source):
     resize_width = config.get('resize_width', None)
     resize_height = config.get('resize_height', None)
 
-    log_interval = timedelta(minutes=1) # This seems unused?
     unknown_log_interval = timedelta(seconds=unknown_log_interval_seconds)
     known_log_interval = timedelta(seconds=known_log_interval_seconds) # Create timedelta for known interval
 
     logging.info(f"Using settings - Process every {process_every_n_frames} frames, Sleep: {live_feed_sleep}s, JPEG Quality: {jpeg_quality}, Resize: {resize_width}x{resize_height}")
     logging.info(f"Log Intervals - Unknown: {unknown_log_interval_seconds}s, Known: {known_log_interval_seconds}s")
-
+    logging.info(f"Using Recognition Threshold: {RECOGNITION_THRESHOLD}") # Log the threshold being used
 
     stop_time_obj = None
     india_tz = pytz.timezone('Asia/Kolkata')
@@ -551,19 +559,18 @@ def generate_frames(source):
 
     cap = None
     try:
+        # --- Camera opening logic (copied from your latest code) ---
         if isinstance(source, str) and source.startswith("rtsp://"):
             logging.info(f"Attempting to open RTSP stream: {source}")
-            # Ensure TCP transport is appended correctly
             parsed_url = urllib.parse.urlparse(source)
             query = urllib.parse.parse_qs(parsed_url.query)
             query['rtsp_transport'] = ['tcp'] # Force TCP
             updated_query = urllib.parse.urlencode(query, doseq=True)
-            # Rebuild URL
             source = urllib.parse.urlunparse(parsed_url._replace(query=updated_query))
 
             logging.info(f"Using RTSP URL with forced TCP: {source}")
             cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
-            buffer_size = 3 # Reduce buffer size for potentially lower latency
+            buffer_size = 3
             success_set_buffer = cap.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
             if success_set_buffer: logging.info(f"Successfully set RTSP buffer size to {buffer_size}.")
             else: logging.warning("Failed to set buffer size for RTSP stream.")
@@ -587,12 +594,13 @@ def generate_frames(source):
             logging.error(f"Cannot open video source: {source}")
             logging.error(f"Exiting generator: Cannot open video source: {source}")
             return
+        # --- End Camera opening logic ---
 
         frame_count = 0
-        last_known_faces_log = {}
+        last_known_faces_log = {} # Stores last SUCCESSFUL log time for each known person
         last_unknown_log_time = None
         consecutive_errors = 0
-        MAX_CONSECUTIVE_ERRORS = 30 # Increased tolerance slightly
+        MAX_CONSECUTIVE_ERRORS = 30
         MAX_RECONNECT_ATTEMPTS = 5
         reconnect_attempts = 0
 
@@ -604,62 +612,54 @@ def generate_frames(source):
                     logging.info(f"Exiting generator: Stop time {stop_time_obj} reached.")
                     break
 
-            # --- Start of frame processing loop modification ---
-            # Read frame directly ONLY if it's time to process according to frame skipping
-            # This simplifies the logic compared to grab/retrieve
-            # NOTE: This approach might read slightly older frames if processing is slow
-            # compared to grab()/retrieve(), but is often more stable.
             frame = None
             if frame_count % process_every_n_frames == 0:
                 try:
+                    # --- Frame reading and error handling (copied from your latest code) ---
                     ret, frame = cap.read()
                     if not ret or frame is None:
                         consecutive_errors += 1
                         logging.warning(f"cap.read() failed for source {source}. Consecutive errors: {consecutive_errors}")
                         if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
                             logging.error(f"Max consecutive read errors ({MAX_CONSECUTIVE_ERRORS}) reached. Attempting to reconnect stream.")
-                            # --- Reconnection Logic (copied from original grab/retrieve error handling) ---
                             cap.release()
                             reconnect_attempts += 1
                             if reconnect_attempts > MAX_RECONNECT_ATTEMPTS:
                                 logging.error(f"Max reconnect attempts ({MAX_RECONNECT_ATTEMPTS}) reached. Stopping generator.")
                                 break
-                            pytime.sleep(2) # Use pytime to avoid confusion with datetime.time
-                            # Re-initialize capture object
+                            pytime.sleep(2)
                             if isinstance(source, str) and source.startswith("rtsp://"):
                                 cap = cv2.VideoCapture(source, cv2.CAP_FFMPEG)
                                 cap.set(cv2.CAP_PROP_BUFFERSIZE, buffer_size)
                             else:
-                                cap = cv2.VideoCapture(source) # Adjust if using specific backends
+                                cap = cv2.VideoCapture(source)
 
                             if not cap.isOpened():
                                 logging.error(f"Reconnection failed for source {source}.")
-                                # Keep trying or break based on desired behavior
-                                pytime.sleep(5) # Wait longer before next attempt
-                                continue # Try to reconnect again
+                                pytime.sleep(5)
+                                continue
                             else:
                                 logging.info(f"Reconnected to stream: {source}")
                                 consecutive_errors = 0
-                            # --- End Reconnection Logic ---
                         else:
-                             pytime.sleep(0.05) # Small delay on read error
-                        frame_count += 1 # Increment even on error to avoid infinite loop if source dies
-                        continue # Skip processing this cycle
+                             pytime.sleep(0.05)
+                        frame_count += 1
+                        continue
                     else:
-                        consecutive_errors = 0 # Reset error count on successful read
+                        consecutive_errors = 0 # Reset error count on success
+                    # --- End Frame reading and error handling ---
 
                 except cv2.error as e:
                     logging.error(f"cv2 error during frame read from source {source}: {e}")
                     consecutive_errors += 1
                     if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
                         logging.error(f"Max consecutive cv2 errors ({MAX_CONSECUTIVE_ERRORS}) reached. Stopping generator.")
-                        break # Stop on too many critical errors
+                        break
                     pytime.sleep(0.1)
                     frame_count += 1
-                    continue # Skip processing
+                    continue
 
-                # --- Frame processing logic starts here ---
-                # Resize frame if config values are set and frame is valid
+                # --- Frame processing starts here ---
                 if frame is not None and resize_width and resize_height:
                     frame = cv2.resize(frame, (resize_width, resize_height), interpolation=cv2.INTER_AREA)
 
@@ -668,7 +668,7 @@ def generate_frames(source):
                     frame_count += 1
                     continue
 
-                processing_frame = frame.copy() # Work on a copy
+                processing_frame = frame.copy()
                 detected_box = None
                 status_text = "Processing..."
                 status_color = (0, 255, 255) # Yellow
@@ -677,9 +677,8 @@ def generate_frames(source):
                     face_embedding, detected_box = detect_and_encode_face(processing_frame)
 
                     if detected_box:
-                        #logging.debug("Face detected in frame.") # Reduce verbosity
                         (x, y, w, h) = detected_box
-                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2) # Green box
+                        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
                         if face_embedding is not None:
                             match_found = False
@@ -691,9 +690,9 @@ def generate_frames(source):
                                     min_distance_idx = np.argmin(distances)
                                     min_distance = distances[min_distance_idx]
 
+                                    # <<< CORE LOGIC FOR KNOWN FACE >>>
                                     if min_distance < RECOGNITION_THRESHOLD:
                                         name = known_face_names[min_distance_idx]
-                                        #logging.debug(f"Match found: {name} (distance: {min_distance:.2f})") # Reduce verbosity
                                         status_text = f"Known: {name} ({min_distance:.2f})"
                                         status_color = (0, 255, 0) # Green
                                         match_found = True
@@ -701,47 +700,43 @@ def generate_frames(source):
                                         now_utc = datetime.utcnow().replace(tzinfo=pytz.utc)
                                         last_log_time = last_known_faces_log.get(name)
 
-                                        # Check if enough time has passed since the last log for this KNOWN person
+                                        # Check if enough time has passed since the last SUCCESSFUL log for this KNOWN person
                                         if not last_log_time or (now_utc - last_log_time) > known_log_interval:
-                                            last_known_faces_log[name] = now_utc
+                                            # * Prepare log entry BEFORE trying to insert *
                                             log_entry = {
                                                 'type': 'known_sighting',
                                                 'name': name,
                                                 'timestamp': now_utc,
                                                 'status_at_log': 'Known'
                                             }
+                                            # <<< MODIFICATION START (Applied from previous response) >>>
+                                            # Always log known sightings to the main seen_log collection
+                                            collection_to_log = mongo.db.seen_log
+                                            target_collection_name = "seen_log"
+                                            logging.debug(f"Attempting to log known sighting for {name} to collection: {target_collection_name}")
+                                            # <<< MODIFICATION END >>>
+
                                             try:
-                                                # --- Database logging for known faces (unchanged) ---
-                                                student_doc = mongo.db.students.find_one({'name': name}, {"branch": 1, "academic_year": 1})
-                                                collection_to_log = mongo.db.seen_log # Default collection
-                                                if student_doc:
-                                                    branch = student_doc.get("branch")
-                                                    year = student_doc.get("academic_year")
-                                                    # Basic check if branch and year seem valid for specific collection
-                                                    if branch and isinstance(branch, str) and year and isinstance(year, str) and year in ['1st', '2nd', '3rd']:
-                                                        try:
-                                                            branch_coll = branch.lower().replace(".", "").replace(" ", "_")
-                                                            year_coll = year.lower().replace(".", "").replace(" ", "_")
-                                                            collection_name = f"{branch_coll}_{year_coll}_year"
-                                                            # Basic check if collection name seems safe
-                                                            if collection_name.isalnum() or '_' in collection_name:
-                                                                collection_to_log = getattr(mongo.db, collection_name)
-                                                                logging.debug(f"Logging known sighting for {name} to specific collection: {collection_name}")
-                                                            else:
-                                                                logging.warning(f"Generated collection name '{collection_name}' invalid. Using default seen_log.")
-                                                        except Exception as coll_err:
-                                                             logging.error(f"Error determining specific collection for {name}: {coll_err}. Using default seen_log.")
-                                                    else:
-                                                        logging.debug(f"Branch/year missing or invalid for {name} ('{branch}', '{year}'). Using default seen_log.")
+                                                # Attempt insertion
+                                                insert_result = collection_to_log.insert_one(log_entry)
 
-                                                collection_to_log.insert_one(log_entry)
-                                                logging.debug(f"Logged known sighting for {name} at {now_utc} (Interval: {known_log_interval_seconds}s)")
-                                                # --- End database logging ---
+                                                # *** CRITICAL FIX: Update last log time ONLY on successful insert ***
+                                                if insert_result.acknowledged:
+                                                    last_known_faces_log[name] = now_utc # UPDATE TIMESTAMP *AFTER* SUCCESSFUL INSERT
+                                                    logging.info(f"Successfully logged known sighting for {name} to {target_collection_name} at {now_utc} (Interval: {known_log_interval_seconds}s)") # Use logging.info
+                                                else:
+                                                     # Don't update last_known_faces_log here
+                                                     logging.warning(f"Database insertion for known sighting of {name} to {target_collection_name} was not acknowledged.")
+
                                             except Exception as log_e:
-                                                logging.error(f"Failed to log known sighting for {name}: {log_e}")
-                                        #else: # Reduce verbosity
-                                            #logging.debug(f"Skipping log for known {name}: Interval not passed.")
+                                                # Log the error, but crucially, DO NOT update last_known_faces_log[name] here
+                                                logging.error(f"Failed to log known sighting for {name} to {collection_to_log.name}: {log_e}", exc_info=True) # Add exc_info
+                                        # else: # Log skipped due to interval (Optional debug logging)
+                                            # logging.debug(f"Skipping log for known {name}: Interval not passed.")
+                                    # <<< END CORE LOGIC FOR KNOWN FACE >>>
 
+
+                            # <<< LOGIC FOR UNKNOWN FACE >>>
                             if not match_found:
                                 status_text = f"Unknown ({min_distance:.2f})" if min_distance != float('inf') else "Unknown"
                                 status_color = (0, 0, 255) # Red
@@ -760,29 +755,40 @@ def generate_frames(source):
 
                                     log_entry = {'type': 'unknown_sighting', 'timestamp': now_utc, 'status_at_log': 'Unknown', 'face_image_base64': face_img_b64}
                                     try:
-                                        mongo.db.seen_log.insert_one(log_entry)
-                                        logging.info(f"Logged unknown sighting at {now_utc} (Interval: {unknown_log_interval_seconds}s)")
-                                    except Exception as log_e: logging.error(f"Failed to log unknown sighting: {log_e}")
-                                    last_unknown_log_time = now_utc # Update time only after successful log attempt
-                                #else: # Reduce verbosity
-                                    #logging.debug("Skipping log for unknown face: Interval not passed.")
-                        else:
-                            status_text = "Encoding Error" # Error getting embedding
+                                        # Attempt insertion for unknown
+                                        unknown_insert_result = mongo.db.seen_log.insert_one(log_entry)
+                                        # Update time only if successful
+                                        if unknown_insert_result.acknowledged:
+                                            last_unknown_log_time = now_utc # UPDATE TIMESTAMP *AFTER* SUCCESSFUL INSERT
+                                            logging.info(f"Logged unknown sighting at {now_utc} (Interval: {unknown_log_interval_seconds}s)")
+                                        else:
+                                            logging.warning("Database insertion for unknown sighting was not acknowledged.")
+                                    except Exception as log_e:
+                                        # Don't update last_unknown_log_time here
+                                        logging.error(f"Failed to log unknown sighting: {log_e}", exc_info=True)
+                                # else: # Log skipped due to interval (Optional debug logging)
+                                    # logging.debug("Skipping log for unknown face: Interval not passed.")
+                            # <<< END LOGIC FOR UNKNOWN FACE >>>
+
+                        else: # face_embedding is None
+                            status_text = "Encoding Error"
                             status_color = (255, 0, 0) # Blue
-                    else:
+                    else: # detected_box is None
                         status_text = "No Face Detected"
                         status_color = (255, 255, 255) # White
 
+                # --- Error Handling for face processing ---
                 except cv2.error as e:
                     logging.error(f"cv2 error during face processing: {e}")
                     status_text = "Detection/Encoding Error"
-                    status_color = (255, 0, 0) # Blue
+                    status_color = (255, 0, 0)
                 except Exception as e:
                     logging.error(f"Unexpected error during face processing: {e}", exc_info=True)
                     status_text = "Unexpected Processing Error"
-                    status_color = (255, 0, 0) # Blue
+                    status_color = (255, 0, 0)
+                # --- End Error Handling ---
 
-                # Draw status text on the *original* frame (before encoding)
+                # Draw status text on the frame
                 cv2.putText(frame, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
 
                 # --- Encode and yield the frame ---
@@ -791,7 +797,6 @@ def generate_frames(source):
                     ret, buffer = cv2.imencode('.jpg', frame, encode_param)
                     if not ret:
                         logging.warning(f"cv2.imencode failed for source {source}. Skipping frame.")
-                        # No need to increment frame_count here as it's done below
                     else:
                         frame_bytes = buffer.tobytes()
                         yield (b'--frame\r\n'
@@ -801,16 +806,16 @@ def generate_frames(source):
                 except Exception as e:
                      logging.error(f"Unexpected error during frame encoding/yielding for source {source}: {e}")
                      break # Exit loop on yield error
+                # --- End Encode and yield ---
 
-            # --- End of frame processing loop modification ---
-
-            # Optional sleep outside the processing block to control overall loop speed
-            # If live_feed_sleep is 0, this has no effect.
+            # --- Loop control ---
             if live_feed_sleep > 0:
                  pytime.sleep(live_feed_sleep)
 
             frame_count += 1 # Increment frame count for frame skipping logic
+            # --- End Loop control ---
 
+    # --- Generator Exit/Error Handling ---
     except (GeneratorExit, ConnectionResetError, BrokenPipeError) as e:
         logging.info(f"Client disconnected or connection lost for source {source}: {type(e).__name__}")
     except Exception as e:
@@ -822,7 +827,9 @@ def generate_frames(source):
         else:
             logging.info(f"Video source {source} was not open or already released.")
         logging.info(f"generate_frames exited for source: {source}")
+    # --- End Generator Exit/Error Handling ---
 
+# --- Keep the rest of your app.py file as it is ---
 
 @app.route('/video_feed')
 def video_feed():
@@ -1464,6 +1471,7 @@ def attendance_page():
         logging.info(f"Attendance Query: Fetching logs between {start_of_day_utc} (UTC) and {end_of_day_utc} (UTC)")
 
         # --- Dynamic Collection Logic (if branch and year are selected) ---
+        # <<< NOTE: This line ensures we query the correct collection >>>
         collection_to_query = mongo.db.seen_log # Default to main log
         log_query = {
             'type': 'known_sighting',
@@ -1508,13 +1516,13 @@ def attendance_page():
                         attendance_data[name]['last'] = timestamp_utc # Always update last seen
                     # else: # Filtered out
                         # logging.debug(f"Filtering out log for '{name}' due to mismatch: Branch OK={branch_matches}, Year OK={year_matches}")
-            # else: # User details not found, cannot filter effectively
-            #     logging.warning(f"Details not found for user '{name}' in log record. Including by default if filters are off.")
-            #     Include if no filters are active
-            if not branch_filter and not academic_year_filter:
-                if attendance_data[name]['first'] is None:
-                    attendance_data[name]['first'] = timestamp_utc
-                attendance_data[name]['last'] = timestamp_utc
+                # else: # User details not found, cannot filter effectively
+                #     logging.warning(f"Details not found for user '{name}' in log record. Including by default if filters are off.")
+                #     Include if no filters are active
+                elif not branch_filter and not academic_year_filter: # Check if details missing AND filters off
+                    if attendance_data[name]['first'] is None:
+                        attendance_data[name]['first'] = timestamp_utc
+                    attendance_data[name]['last'] = timestamp_utc
 
 
         logging.info(f"Attendance Query: Processed {processed_log_count} known_sighting logs for {selected_date}.")
@@ -1585,6 +1593,7 @@ def export_attendance_excel():
         start_of_day_utc = start_of_day_local.astimezone(pytz.utc)
         end_of_day_utc = end_of_day_local.astimezone(pytz.utc)
 
+        # <<< NOTE: This line ensures we query the correct collection >>>
         collection_to_query = mongo.db.seen_log
         log_query = {
             'type': 'known_sighting',
